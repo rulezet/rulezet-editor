@@ -58,7 +58,7 @@ def validation_result(value):
 
 
 def rule_item(value):
-    """Rulezet rule (title, ...) or plain dict -> { name, uuid, description, author, content, url }."""
+    """Rulezet rule (title, ...) or plain dict -> { name, uuid, description, author, content, url, can_edit }."""
     get = value.get if isinstance(value, dict) else (lambda k, d=None: getattr(value, k, d))
     return {
         'name': get('name') or get('title') or '',
@@ -67,6 +67,8 @@ def rule_item(value):
         'author': get('author') or '',
         'content': get('content') or get('to_string') or '',
         'url': get('url'),
+        # the user may edit it on the host: an inserted copy can be unlocked (then updated)
+        'can_edit': bool(get('can_edit')),
     }
 
 

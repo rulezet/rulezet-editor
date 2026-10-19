@@ -30,6 +30,7 @@ export function renderOutline(el, rules, { t, filter, onFilter, onSelect, onSele
             ...(a.notes || []).map(n => h('div', { text: n })),
             ...(a.links || []).map(l => h('a', { href: l.url, target: '_blank', rel: 'noopener', text: l.label }))) : '';
         const meta = h('div', { class: 'rze-outline-meta' },
+            r.locked ? h('span', { class: 'rze-chip rze-chip-lock', title: r.locked.label, text: '🔒 ' + (r.locked.label || 'locked') }) : '',
             a && a.badge ? h('span', { class: `rze-chip rze-badge rze-tone-${a.tone || 'info'}`, text: a.badge }) : '',
             r.kind !== 'rule' ? h('span', { class: 'rze-chip', text: r.kind }) : '',
             ...(r.tags || []).map(tag => h('span', { class: 'rze-chip rze-chip-tag', text: tag })),

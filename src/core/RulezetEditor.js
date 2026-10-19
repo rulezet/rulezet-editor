@@ -12,7 +12,7 @@ import { EditorState, Compartment, StateEffect, StateField, EditorSelection } fr
 import {
     EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection,
     dropCursor, rectangularSelection, crosshairCursor, highlightSpecialChars, hoverTooltip, Decoration,
-    ViewPlugin, showPanel,
+    ViewPlugin, showPanel, WidgetType,
 } from '@codemirror/view';
 import {
     StreamLanguage, foldGutter, foldService, indentOnInput, bracketMatching, foldKeymap, indentUnit,
@@ -70,6 +70,7 @@ const COMPLETION_TYPES = {
 };
 
 const renameEffect = StateEffect.define();
+const locksChanged = StateEffect.define();
 const refreshLint = StateEffect.define();
 
 export class RulezetEditor {
@@ -89,6 +90,7 @@ export class RulezetEditor {
         this._foldCache = new WeakMap();
         this._server = { text: null, items: [], error: null };
         this._annotations = { text: null, diagnostics: [], rules: {} };
+        this._locks = new Map();      // rule name -> { label, canUnlock, url }
         this._serverState = this._serverEnabled() ? 'idle' : 'off';
         this._externals = new Map();
         this._timers = {};
@@ -122,6 +124,7 @@ export class RulezetEditor {
 
     setValue(value, { keepHistory = true } = {}) {
         const state = this.view.state;
+        this._locks.clear();
         this.view.dispatch({ changes: { from: 0, to: state.doc.length, insert: value || '' }, userEvent: keepHistory ? 'input.replace' : undefined });
     }
 
@@ -235,6 +238,30 @@ export class RulezetEditor {
         this._annotations = { text: null, diagnostics: [], rules: {} };
         this._relint();
     }
+
+    /**
+     * Locks a rule of the document (by name): read-only, with a bar above it. Used for rules
+     * inserted from the host: they stay what the host has unless the user unlocks them, which
+     * `canUnlock` allows (e.g. the user may edit that rule on the host).
+     *   info: { label, canUnlock, url }
+     */
+    lockRule(name, info = {}) {
+        this._locks.set(name, { label: info.label || (this.host ? this.host.name : ''), canUnlock: !!info.canUnlock, url: info.url || null });
+        this.view.dispatch({ effects: locksChanged.of(null) });
+        this._afterLint(this.getModel());
+        this.events.emit('locks', this.getLocks());
+    }
+
+    unlockRule(name) {
+        if (!this._locks.delete(name)) return;
+        this.view.dispatch({ effects: locksChanged.of(null) });
+        this._afterLint(this.getModel());
+        this.events.emit('locks', this.getLocks());
+    }
+
+    isLocked(name) { return this._locks.has(name); }
+
+    getLocks() { return [...this._locks].map(([name, info]) => ({ name, ...info })); }
 
     /** Short message at the bottom of the editor. */
     notify(message) { this._toast(message); }
@@ -422,6 +449,7 @@ export class RulezetEditor {
             }),
             hoverTooltip((view, pos, side) => this._hover(view, pos, side), { hoverTime: 350 }),
             referenceHighlighter(this),
+            ruleLocks(this),
             renamePanel(this),
             keymap.of([
                 { key: 'F12', run: () => this.goToDefinition() },
@@ -716,6 +744,7 @@ export class RulezetEditor {
             changes.push({ from: pos, to: pos, insert: last ? '\n' + missing.join('\n') : missing.join('\n') + '\n\n' });
         }
         this.view.dispatch({ changes, userEvent: 'input.insert', scrollIntoView: true });
+        this.lockRule(rule.name, { canUnlock: !!rule.can_edit, url: rule.url });
         this._toast(`${rule.name}: inserted`);
     }
 
@@ -736,6 +765,7 @@ export class RulezetEditor {
             infos: inRule.filter(d => d.severity === 'info' || d.severity === 'hint').length,
             line: this.view.state.doc.lineAt(Math.min(r.from, this.view.state.doc.length)).number,
             annotation: (this._annotations.rules || {})[r.name] || null,
+            locked: this._locks.get(r.name) || null,
         };
     }
 
@@ -1110,6 +1140,75 @@ function renderHover(info, t) {
         body,
         info.link ? h('a', { class: 'rze-hover-link', href: info.link, target: '_blank', rel: 'noopener' }, icon('link'), ' ', t('openOnHost', { host: new URL(info.link, location.href).host })) : '',
     );
+}
+
+/**
+ * Locked rules (lockRule): edits inside them are refused (with a message), a bar above each one
+ * says where it comes from and offers to unlock it. Locks follow the rule by name, so formatting
+ * or text moving around keeps them; deleting the whole rule is allowed.
+ */
+function ruleLocks(editor) {
+    const lockedRanges = (state) => {
+        if (!editor._locks.size || !editor.pack.splitRules) return [];
+        let rules = [];
+        try { rules = editor.pack.splitRules(editor._model(state)); } catch { rules = []; }
+        return rules.filter(r => editor._locks.has(r.name));
+    };
+
+    class LockBar extends WidgetType {
+        constructor(name, info) { super(); this.name = name; this.info = info; }
+        eq(other) { return other.name === this.name && other.info.canUnlock === this.info.canUnlock && other.info.label === this.info.label; }
+        toDOM() {
+            const t = editor.t;
+            return h('div', { class: 'rze-lockbar' },
+                icon('lock'),
+                h('span', { text: t('lockedFrom', { host: this.info.label || '' }) }),
+                h('span', { class: 'rze-toolbar-fill' }),
+                this.info.url ? h('a', { href: this.info.url, target: '_blank', rel: 'noopener', text: t('open') }) : '',
+                this.info.canUnlock
+                    ? h('button', { type: 'button', class: 'rze-btn rze-lockbar-unlock', title: t('unlockHint'), onclick: () => editor.unlockRule(this.name) }, icon('unlock'), h('span', { text: t('unlock') }))
+                    : h('span', { class: 'rze-lockbar-ro', text: t('lockedReadOnly') }));
+        }
+        ignoreEvent() { return true; }
+    }
+
+    const build = (state) => {
+        const marks = [];
+        for (const r of lockedRanges(state)) {
+            const first = state.doc.lineAt(Math.min(r.from, state.doc.length));
+            const last = state.doc.lineAt(Math.min(r.to, state.doc.length));
+            marks.push(Decoration.widget({ widget: new LockBar(r.name, editor._locks.get(r.name)), block: true, side: -1 }).range(first.from));
+            for (let n = first.number; n <= last.number; n++) marks.push(Decoration.line({ class: 'rze-locked' }).range(state.doc.line(n).from));
+        }
+        return Decoration.set(marks, true);
+    };
+
+    const field = StateField.define({
+        create: build,
+        update: (value, tr) => (tr.docChanged || tr.effects.some(e => e.is(locksChanged))) ? build(tr.state) : value,
+        provide: f => EditorView.decorations.from(f),
+    });
+
+    // edits strictly inside a locked rule are refused; the formatter (whitespace only) may pass
+    const guard = EditorState.transactionFilter.of(tr => {
+        if (!tr.docChanged || tr.isUserEvent('format') || !editor._locks.size) return tr;
+        const ranges = lockedRanges(tr.startState);
+        if (!ranges.length) return tr;
+        let blocked = null;
+        tr.changes.iterChangedRanges((fromA, toA) => {
+            for (const r of ranges) {
+                const wholeRule = fromA <= r.from && toA >= r.to;
+                const inside = fromA === toA ? fromA > r.from && fromA < r.to : fromA < r.to && toA > r.from;
+                if (inside && !wholeRule) blocked = r;
+            }
+        });
+        if (!blocked) return tr;
+        const info = editor._locks.get(blocked.name);
+        queueMicrotask(() => editor._toast(editor.t(info && info.canUnlock ? 'lockedUnlockFirst' : 'lockedNoRight', { name: blocked.name })));
+        return [];
+    });
+
+    return [field, guard];
 }
 
 /** Highlights every occurrence of the $string / rule name under the cursor. */

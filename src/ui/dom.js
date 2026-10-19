@@ -32,6 +32,8 @@ export const ICONS = {
     palette: svg('<rect x="1.5" y="3" width="13" height="10" rx="1.5"/><path d="M4 6.5l2 1.5-2 1.5M7.5 10h4"/>'),
     sun: svg('<circle cx="8" cy="8" r="3"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M3 13l1-1M12 4l1-1"/>'),
     moon: svg('<path d="M13 9.5A5.5 5.5 0 1 1 6.5 3a4.5 4.5 0 0 0 6.5 6.5z"/>'),
+    lock: svg('<rect x="3.5" y="7" width="9" height="7" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>'),
+    unlock: svg('<rect x="3.5" y="7" width="9" height="7" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7"/>'),
     search: svg('<circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4 14 14"/>'),
     wrap: svg('<path d="M2 4h12M2 8h9.5a2.5 2.5 0 0 1 0 5H8M9.5 11 8 13l1.5 2M2 12h3"/>'),
     expand: svg('<path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/>'),
