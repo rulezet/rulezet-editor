@@ -103,6 +103,7 @@ export class RulezetEditor {
 
         this._buildDom(element);
         this._createView(initial);
+        this._renderToolbar();          // host buttons can now ask the editor (disabled())
         this._applyTheme();
         this._watchTheme();
         this._setOutlineOpen(this.options.outline === true);
@@ -850,6 +851,13 @@ export class RulezetEditor {
         }
     }
 
+    /** Host buttons stay disabled until the editor exists; a throwing disabled() disables. */
+    _hostButtonDisabled(b) {
+        if (!this.view) return true;
+        if (typeof b.disabled !== 'function') return !!b.disabled;
+        try { return !!b.disabled(this); } catch { return true; }
+    }
+
     _initialWrap() {
         if (this.options.lineWrapping == null) {
             let saved = null;
@@ -877,7 +885,7 @@ export class RulezetEditor {
             h('span', { class: 'rze-toolbar-fill' }),
             ...(this.options.buttons || []).map(b => h('button', {
                 type: 'button', class: `rze-btn rze-host-btn${b.primary ? ' rze-btn-primary' : ''}`, title: b.title || b.label, 'aria-label': b.label,
-                disabled: typeof b.disabled === 'function' ? !!b.disabled(this) : !!b.disabled,
+                disabled: this._hostButtonDisabled(b),
                 onclick: () => b.run(this),
             }, b.icon ? icon(b.icon) : '', h('span', { class: 'rze-btn-label', text: b.label }))),
             (this.options.buttons || []).length ? h('span', { class: 'rze-toolbar-sep' }) : '',
