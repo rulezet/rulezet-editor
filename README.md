@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/logo.png" alt="rulezet-editor logo" width="200">
+</p>
+
 # rulezet-editor
 
 A standalone, pluggable editor for detection rules (YARA first; Sigma, Suricata, Zeek, Wazuh, ... next).
