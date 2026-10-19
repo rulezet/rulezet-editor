@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>rulezet-editor playground</title>
+    <link rel="stylesheet" href="/dist/rulezet-editor.css">
+    <link rel="stylesheet" href="/playground/playground.css">
+</head>
+<body>
+    <header class="pg-header">
+        <div>
+            <h1>rulezet-editor</h1>
+            <p>Playground. Type, hover, Ctrl+Space, F12, F2, Shift+Alt+F, Ctrl+Shift+P.</p>
+        </div>
+        <div class="pg-controls">
+            <label>Sample
+                <select id="pg-sample"></select>
+            </label>
+            <label>Language
+                <select id="pg-lang"></select>
+            </label>
+            <label>Backend
+                <select id="pg-host">
+                    <option value="rulezet">Rulezet (proxied)</option>
+                    <option value="none">None (offline)</option>
+                </select>
+            </label>
+            <label>Theme
+                <select id="pg-theme">
+                    <option value="auto">Auto</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </label>
+            <label>UI
+                <select id="pg-locale">
+                    <option value="en">English</option>
+                    <option value="fr">Francais</option>
+                </select>
+            </label>
+            <label class="pg-check"><input type="checkbox" id="pg-readonly"> Read only</label>
+        </div>
+    </header>
+
+    <main class="pg-main">
+        <div id="editor" class="pg-editor"></div>
+        <aside class="pg-side">
+            <h2>Events</h2>
+            <ul id="pg-events"></ul>
+            <h2>API</h2>
+            <div class="pg-buttons">
+                <button type="button" data-api="getRules">getRules()</button>
+                <button type="button" data-api="getDiagnostics">getDiagnostics()</button>
+                <button type="button" data-api="format">format()</button>
+                <button type="button" data-api="validate">validate()</button>
+                <button type="button" data-api="getValue">getValue()</button>
+            </div>
+            <pre id="pg-output"></pre>
+        </aside>
+    </main>
+
+    <script type="module" src="/playground/main.js"></script>
+</body>
+</html>

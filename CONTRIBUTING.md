@@ -13,9 +13,9 @@
 7. Run `npm test`. The conformance suite checks every pack: it loads, detects its own fixtures,
    does not throw on garbage input, `splitRules` covers the whole text, lint ranges stay inside
    the text, no network and no DOM access.
-8. Run `npm run playground`, try it, open a pull request.
+8. Run `npm run dev`, open http://127.0.0.1:5173/, pick your language, try it, open a pull request.
 
-The full pack interface is described in [docs/design.md](docs/design.md#6-language-pack-interface).
+The full pack interface is described in [docs/language-pack.md](docs/language-pack.md). The YARA pack (`src/languages/yara/`) is a complete example.
 
 ## Pack maturity
 

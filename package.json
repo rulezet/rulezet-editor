@@ -1,0 +1,46 @@
+{
+  "name": "rulezet-editor",
+  "version": "0.1.0",
+  "description": "Standalone, pluggable editor for detection rules (YARA, Sigma, Suricata, ...)",
+  "main": "dist/rulezet-editor.js",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rulezet/rulezet-editor.git"
+  },
+  "keywords": [],
+  "author": "Theo Geffe",
+  "license": "AGPL-3.0-only",
+  "bugs": {
+    "url": "https://github.com/rulezet/rulezet-editor/issues"
+  },
+  "homepage": "https://github.com/rulezet/rulezet-editor#readme",
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.14",
+    "@lezer/highlight": "^1.2.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "type": "module",
+  "module": "dist/rulezet-editor.js",
+  "exports": {
+    ".": "./dist/rulezet-editor.js",
+    "./src": "./src/index.js",
+    "./css": "./dist/rulezet-editor.css"
+  },
+  "files": [
+    "dist",
+    "src"
+  ]
+}
