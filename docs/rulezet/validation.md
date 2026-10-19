@@ -12,6 +12,8 @@ warnings from the real compiler appear in the gutter and the problems panel, nex
 
 ## Inside Rulezet
 
+Code: `app/features/editor/editor_core.py` (rulezet-core, branch `editor`).
+
 ```python
 from app.features.rule import rule_core
 FunctionBackend(

@@ -121,3 +121,34 @@ test('definition and hover', () => {
     const h = yara.hover({ text: src, pos: src.indexOf('is_dll') + 1, parsed: m });
     assert.match(h.title, /is_dll\(\)/);
 });
+
+test('rule tools: date, id, tag, string, PE check, private', () => {
+    const apply = (t, changes) => {
+        for (const c of [...changes].sort((a, b) => b.from - a.from)) t = t.slice(0, c.from) + c.insert + t.slice(c.to);
+        return t.replace('{{uuid}}', '123e4567-e89b-42d3-a456-426614174000').replace(/\{\{date\}\}/g, '2026-10-19');
+    };
+    const run = (t, id, value) => {
+        const ctx = { text: t, pos: 10, parsed: yara.parse(t), author: 'me' };
+        const action = yara.actions(ctx).find(a => a.id === id);
+        const res = action.run(ctx, value);
+        assert.ok(Array.isArray(res), `${id}: ${res && res.error}`);
+        return apply(t, res);
+    };
+    let t = 'rule demo\n{\n    strings:\n        $a = "evil"\n    condition:\n        $a or uint8(0) == 1\n}';
+    t = run(t, 'yara.date');
+    assert.match(t, /meta:\n        date = "2026-10-19"/);
+    t = run(t, 'yara.date');
+    assert.match(t, /modified = "2026-10-19"/);
+    t = run(t, 'yara.id');
+    t = run(t, 'yara.tag', 'apt ransomware');
+    t = run(t, 'yara.string', 'bad.com');
+    t = run(t, 'yara.pe');
+    t = run(t, 'yara.private');
+    assert.match(t, /^private rule demo : apt ransomware/);
+    assert.match(t, /\$s1 = "bad.com"/);
+    assert.match(t, /uint16\(0\) == 0x5A4D and \(\$a or uint8\(0\) == 1 or \$s1\)/);
+    const errors = yara.lint(yara.parse(t), { requireMeta: [] }).filter(d => d.severity !== 'info');
+    assert.deepEqual(errors, []);
+    const ctx = { text: t, pos: 10, parsed: yara.parse(t) };
+    assert.ok(yara.actions(ctx).find(a => a.id === 'yara.tag').run(ctx, '1bad').error);
+});

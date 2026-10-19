@@ -13,6 +13,8 @@ diagnostic for `external-rule`, Ctrl+Click to open, insert the rule in the docum
 
 ## Inside Rulezet
 
+Code: `app/features/editor/editor_core.py` (rulezet-core, branch `editor`).
+
 ```python
 from app.core.db_class.rule import Rule
 from app.features.rule import rule_core
