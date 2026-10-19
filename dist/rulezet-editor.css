@@ -16,6 +16,7 @@
     --rze-bracket-match: rgba(13, 110, 253, 0.15);
     --rze-caret: #0d6efd;
     --rze-accent: #0d6efd;
+    --rze-on-accent: #ffffff;
     --rze-ref: rgba(13, 110, 253, 0.13);
     --rze-ref-def: rgba(25, 135, 84, 0.20);
     --rze-error: #d1242f;
@@ -63,6 +64,7 @@
     --rze-bracket-match: rgba(0, 100, 0, 0.35);
     --rze-caret: #aeafad;
     --rze-accent: #0e639c;
+    --rze-on-accent: #ffffff;
     --rze-ref: rgba(87, 87, 87, 0.6);
     --rze-ref-def: rgba(72, 108, 60, 0.6);
     --rze-error: #f14c4c;
@@ -220,6 +222,18 @@
 .rze-outline-count { font-size: 11px; color: var(--rze-muted); }
 .rze-outline-meta { display: flex; flex-wrap: wrap; gap: 4px; padding-left: 20px; }
 .rze-outline-detail { width: 100%; color: var(--rze-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rze-badge { font-weight: 600; }
+.rze-chip.rze-tone-ok { color: var(--rze-ok); border-color: var(--rze-ok); }
+.rze-chip.rze-tone-info { color: var(--rze-info); border-color: var(--rze-info); }
+.rze-chip.rze-tone-warning { color: var(--rze-warning); border-color: var(--rze-warning); }
+.rze-chip.rze-tone-error { color: var(--rze-error); border-color: var(--rze-error); }
+.rze-outline-note { margin: 2px 0 2px 22px; padding: 3px 8px; font-size: 11.5px; border-left: 2px solid var(--rze-border); color: var(--rze-muted); display: flex; flex-direction: column; gap: 1px; }
+.rze-outline-note.rze-tone-error { border-left-color: var(--rze-error); color: var(--rze-error); }
+.rze-outline-note.rze-tone-warning { border-left-color: var(--rze-warning); }
+.rze-outline-note a { color: var(--rze-accent); text-decoration: none; }
+.rze-outline-note a:hover { text-decoration: underline; }
+.rze-host-btn:disabled { opacity: .45; cursor: not-allowed; }
+.rze-btn-primary { background: var(--rze-accent); color: var(--rze-on-accent); border-color: var(--rze-accent); }
 .rze-chip { font-size: 11px; padding: 0 6px; border-radius: 9px; border: 1px solid var(--rze-border); color: var(--rze-muted); }
 .rze-chip-tag { color: var(--rze-tag); }
 .rze-outline-children { list-style: none; margin: 2px 0 0; padding-left: 20px; display: none; }

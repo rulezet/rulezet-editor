@@ -8,11 +8,19 @@ database, rule tools and drafts.
 
 - Browser: `RulezetEditor` + `EditorServerHost({ baseUrl: '/editor-api', csrfToken })`, loaded
   from `/editor-api/assets/rulezet-editor.js` the first time the tab is opened.
-- Saving: the whole document is posted to `rule.parse_rule` (`format=yara`, `content`), like the
-  Parse tab: every rule is created with the metadata of its `meta:` section.
+- Check: `POST /editor-api/yara/plan` `{ imports, rules: [{ name, text }] }` -> one entry per rule:
+  `new | exists | error | blocked`, `depends_on` (this document or Rulezet), `existing`, `errors`
+  (line inside the rule). Nothing is written.
+- Create: `POST /editor-api/yara/import`, same body: checks again, then creates the new rules
+  (dependencies first, through `add_rule_core`) and links each to what it needs
+  (`yara_condition_ref`, source `auto`). 409 and nothing created when one rule has an error;
+  no bad rule is ever saved.
 
 ## Inside Rulezet
 
+- `app/features/editor/editor_core.py`: `plan_yara`, `import_yara`. A rule "exists" when an
+  active rule has the same meta id, the same content or the same YARA name: it is reused for the
+  links, never created again. Each rule keeps only the imports it uses.
 - `app/static/js/rule/YaraEditorPanel.js`, used in `app/templates/rule/rule.html`
   (tab `yara_editor`, in `VALID_TABS`).
 - Login: the page is `@login_required`, `/editor-api` answers 401 to anonymous users.
@@ -25,4 +33,4 @@ Not applicable (Rulezet page).
 
 ## Tests
 
-`tests_new/editor/test_editor_api.py::test_create_page_has_the_yara_editor_tab`.
+`tests_new/editor/test_editor_api.py`, `tests_new/editor/test_editor_yara_import.py`.

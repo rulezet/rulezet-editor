@@ -25,7 +25,12 @@ export function renderOutline(el, rules, { t, filter, onFilter, onSelect, onSele
             r.errors || r.warnings ? h('span', { class: 'rze-outline-count', text: `${r.errors ? r.errors + 'E' : ''}${r.errors && r.warnings ? ' ' : ''}${r.warnings ? r.warnings + 'W' : ''}` }) : '',
             h('button', { type: 'button', class: 'rze-icon-btn', title: t('copy'), 'aria-label': `${t('copy')} ${r.name}`, onclick: () => onCopy(r) }, icon('copy')),
         );
+        const a = r.annotation;
+        const note = a ? h('div', { class: `rze-outline-note rze-tone-${a.tone || 'info'}` },
+            ...(a.notes || []).map(n => h('div', { text: n })),
+            ...(a.links || []).map(l => h('a', { href: l.url, target: '_blank', rel: 'noopener', text: l.label }))) : '';
         const meta = h('div', { class: 'rze-outline-meta' },
+            a && a.badge ? h('span', { class: `rze-chip rze-badge rze-tone-${a.tone || 'info'}`, text: a.badge }) : '',
             r.kind !== 'rule' ? h('span', { class: 'rze-chip', text: r.kind }) : '',
             ...(r.tags || []).map(tag => h('span', { class: 'rze-chip rze-chip-tag', text: tag })),
             r.detail ? h('div', { class: 'rze-outline-detail', text: r.detail }) : '',
@@ -35,7 +40,7 @@ export function renderOutline(el, rules, { t, filter, onFilter, onSelect, onSele
                 h('button', { type: 'button', class: 'rze-outline-child', onclick: () => onSelectChild(c), title: c.kind },
                     h('span', { class: 'rze-outline-child-name', text: c.name }),
                     h('span', { class: 'rze-outline-child-kind', text: c.kind }))))) : '';
-        list.appendChild(h('li', { class: `rze-outline-item${r.from === activeFrom ? ' rze-active' : ''}`, 'data-from': r.from }, head, meta, children));
+        list.appendChild(h('li', { class: `rze-outline-item${r.from === activeFrom ? ' rze-active' : ''}`, 'data-from': r.from }, head, meta, note, children));
     }
 
     el.replaceChildren(

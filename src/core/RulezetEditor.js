@@ -57,7 +57,8 @@ const DEFAULTS = {
     lint: {},                    // options passed to pack.lint
     format: {},                  // options passed to pack.format
     draftKey: null,              // autosave drafts under this key (host.saveDraft or localStorage)
-    author: null,                // default author for authoring actions (e.g. the logged-in user)
+    author: null,
+    buttons: [],                 // host page buttons in the toolbar: [{ id, label, icon?, title?, primary?, disabled?(), run(editor) }]                // default author for authoring actions (e.g. the logged-in user)
     lineWrapping: null,          // null: last choice of this viewer (default off)
     placeholder: '',
 };
@@ -87,6 +88,7 @@ export class RulezetEditor {
         this._modelCache = { doc: null, pack: null, model: null };
         this._foldCache = new WeakMap();
         this._server = { text: null, items: [], error: null };
+        this._annotations = { text: null, diagnostics: [], rules: {} };
         this._serverState = this._serverEnabled() ? 'idle' : 'off';
         this._externals = new Map();
         this._timers = {};
@@ -213,6 +215,31 @@ export class RulezetEditor {
         this.view.dispatch({ effects: this.readOnlyConf.reconfigure(this._readOnlyExtensions()) });
         this._renderStatus();
     }
+
+    /**
+     * Results the host page computed for the current text (e.g. "check before creating"):
+     *   diagnostics  [{ from, to } | { line, column? }, severity, message]  -> underlines + problems panel
+     *   rules        { ruleName: { badge, tone: ok|info|warning|error, notes: [text], links: [{ label, url }] } }
+     *                -> shown on each rule in the rules panel (opened)
+     * Both are dropped as soon as the text changes: they describe that exact text.
+     */
+    setAnnotations({ diagnostics = [], rules = {}, source = '' } = {}) {
+        this._annotations = { text: this.getValue(), diagnostics, rules, source };
+        if (Object.keys(rules).length) this._setOutlineOpen(true);
+        this._relint();
+    }
+
+    clearAnnotations() {
+        if (!this._annotations.text) return;
+        this._annotations = { text: null, diagnostics: [], rules: {} };
+        this._relint();
+    }
+
+    /** Short message at the bottom of the editor. */
+    notify(message) { this._toast(message); }
+
+    /** Re-renders the toolbar (host buttons whose disabled() changed). */
+    refreshToolbar() { this._renderToolbar(); }
 
     /** Search bar of the current document: every match is highlighted. Ctrl+F. */
     toggleSearch(force) {
@@ -566,6 +593,27 @@ export class RulezetEditor {
             }
         }
 
+        // host page results, only for the exact text they were computed on
+        if (this._annotations.text !== null) {
+            if (this._annotations.text === text) {
+                for (const item of this._annotations.diagnostics) {
+                    let from = item.from;
+                    let to = item.to;
+                    if (from == null) {
+                        const line = doc.line(Math.max(1, Math.min(item.line || 1, doc.lines)));
+                        const indent = line.text.match(/^\s*/)[0].length;
+                        from = line.from + (item.column ? Math.min(item.column - 1, line.length) : indent);
+                        to = Math.max(from + 1, line.to);
+                    }
+                    if (diags.some(d => d.severity === item.severity && d.message === item.message && doc.lineAt(clamp(d.from)).number === doc.lineAt(clamp(from)).number)) continue;
+                    diags.push({ from: clamp(from), to: clamp(Math.max(to, from + 1)), severity: item.severity || 'error', message: item.message, source: this._annotations.source || (this.host ? this.host.name : ''), origin: 'host' });
+                }
+            } else {
+                this._annotations = { text: null, diagnostics: [], rules: {} };
+                this.events.emit('annotationsCleared');
+            }
+        }
+
         if (pendingLookups.length) this._lookupExternals(pendingLookups);
 
         diags.sort((a, b) => a.from - b.from || severityRank(a.severity) - severityRank(b.severity));
@@ -686,6 +734,7 @@ export class RulezetEditor {
             warnings: inRule.filter(d => d.severity === 'warning').length,
             infos: inRule.filter(d => d.severity === 'info' || d.severity === 'hint').length,
             line: this.view.state.doc.lineAt(Math.min(r.from, this.view.state.doc.length)).number,
+            annotation: (this._annotations.rules || {})[r.name] || null,
         };
     }
 
@@ -826,6 +875,12 @@ export class RulezetEditor {
             this.pack.splitRules ? btn('outline', t('outline'), () => this.toggleOutline(), this._outlineOpen, `${t('outline')} (Ctrl+Shift+O)`) : '',
             btn('problems', t('problems'), () => this.toggleProblems(), this._problemsOpen, `${t('problems')} (Ctrl+Shift+M)`),
             h('span', { class: 'rze-toolbar-fill' }),
+            ...(this.options.buttons || []).map(b => h('button', {
+                type: 'button', class: `rze-btn rze-host-btn${b.primary ? ' rze-btn-primary' : ''}`, title: b.title || b.label, 'aria-label': b.label,
+                disabled: typeof b.disabled === 'function' ? !!b.disabled(this) : !!b.disabled,
+                onclick: () => b.run(this),
+            }, b.icon ? icon(b.icon) : '', h('span', { class: 'rze-btn-label', text: b.label }))),
+            (this.options.buttons || []).length ? h('span', { class: 'rze-toolbar-sep' }) : '',
             btn('search', t('search'), () => this.toggleSearch(), false, `${t('search')} (Ctrl+F)`),
             btn('palette', t('palette'), () => this.openPalette(), false, `${t('palette')} (Ctrl+Shift+P / F1)`),
             btn(dark ? 'sun' : 'moon', t('theme'), () => this.setTheme(dark ? 'light' : 'dark')),
