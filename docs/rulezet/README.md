@@ -9,6 +9,7 @@ its file exists here.
 | Server validation | [validation.md](validation.md) | `rule_core.validate_rule_syntax` | local compiler, then `POST /api/rule/public/validate` |
 | Rule lookup (completion, hover, external rules) | [rule-lookup.md](rule-lookup.md) | query on `Rule` via `_active()` | `GET /api/rule/public/searchPage` |
 | YARA editor tab (create page) | [create-page.md](create-page.md) | `YaraEditorPanel.js`, saves through `rule.parse_rule` | — |
+| Workspace (folders, files) and bundles | [workspace.md](workspace.md) | `/editor`, `editor_bundle.py`, bundle job step | — |
 | Rule tools, new-rule template | [rule-tools.md](rule-tools.md) | `author` = logged-in user; `meta: id` read as `original_uuid` | — |
 
 Rulezet side (branch `editor` of rulezet-core):
