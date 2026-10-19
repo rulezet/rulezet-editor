@@ -4,7 +4,8 @@
  */
 import { MODULES, resolvePath } from './modules.js';
 import { MODIFIERS, MODIFIER_CONFLICTS } from './keywords.js';
-import { conditionRefs, refMatches, checkHex, checkTextEscapes } from './analysis.js';
+import { conditionRefs, refMatches, checkHex, checkTextEscapes, checkRegex } from './analysis.js';
+import { T } from './lexer.js';
 import { textByteLength } from './parser.js';
 
 export const DEFAULT_LINT_OPTIONS = {
@@ -23,6 +24,20 @@ export function lint(parsed, options = {}) {
         add(e.from, e.to, 'error', e.message, e.code || 'syntax', fixes);
     }
 
+    // escapes: every text string (meta, strings, condition) and every regex outside strings:
+    const stringValues = new Set(parsed.rules.flatMap(r => r.strings.map(x => x.valueFrom)));
+    for (const t of parsed.tokens) {
+        if (t.type === T.TEXT && t.closed) {
+            checkTextEscapes(t.value).forEach(e => add(t.from + e.offset, t.from + e.offset + e.length, 'error', e.message, 'escape'));
+        } else if (t.type === T.REGEX && t.closed && !stringValues.has(t.from)) {
+            checkRegex(t.value.slice(1, t.value.lastIndexOf('/'))).forEach(e => add(t.from + 1 + e.offset, t.from + 1 + e.offset + e.length, 'error', e.message, 'regex'));
+        }
+    }
+
+    for (const inc of parsed.includes) {
+        add(inc.from, inc.to, 'info', `include "${inc.name}" is not resolved by the editor: rules from that file are not checked`, 'include');
+    }
+
     // ── imports ──
     const imported = new Set();
     for (const imp of parsed.imports) {
@@ -31,7 +46,8 @@ export function lint(parsed, options = {}) {
                 [{ label: 'Remove this import', changes: [removeLine(text, imp.from, imp.to)] }]);
         }
         imported.add(imp.name);
-        if (!MODULES[imp.name]) add(imp.nameFrom, imp.nameTo, 'warning', `Unknown module "${imp.name}" (not a standard YARA module)`, 'unknown-module');
+        if (!MODULES[imp.name]) add(imp.nameFrom, imp.nameTo, 'error', `Unknown module "${imp.name}"`, 'unknown-module');
+        else if (MODULES[imp.name].optional) add(imp.nameFrom, imp.nameTo, 'warning', `Module "${imp.name}" is not built into every YARA (missing from yara-python, used by Rulezet)`, 'optional-module');
     }
     const usedModules = new Set();
     const importInsertAt = parsed.imports.length ? lineEnd(text, parsed.imports[parsed.imports.length - 1].to) : 0;
@@ -42,6 +58,7 @@ export function lint(parsed, options = {}) {
 
     // ── rules ──
     const seen = new Map();
+    const metaIds = new Map();
     const defined = new Set();
     const allNames = new Set(parsed.rules.map(r => r.name).filter(Boolean));
 
@@ -54,7 +71,7 @@ export function lint(parsed, options = {}) {
         // tags
         const tagSeen = new Set();
         for (const tag of rule.tags) {
-            if (tagSeen.has(tag.name)) add(tag.from, tag.to, 'warning', `Duplicate tag "${tag.name}"`, 'duplicate-tag');
+            if (tagSeen.has(tag.name)) add(tag.from, tag.to, 'error', `Duplicate tag "${tag.name}"`, 'duplicate-tag');
             tagSeen.add(tag.name);
         }
 
@@ -67,12 +84,26 @@ export function lint(parsed, options = {}) {
                 if (rule.sections.meta) {
                     const at = lineEnd(text, rule.meta.length ? rule.meta[rule.meta.length - 1].to : rule.sections.meta.to);
                     const indent = rule.meta.length ? indentOf(text, rule.meta[0].from) : '        ';
-                    fixes.push({ label: `Add ${missing.join(', ')}`, changes: [{ from: at, to: at, insert: missing.map(k => `\n${indent}${k} = ""`).join('') }] });
+                    fixes.push({ label: `Add ${missing.join(', ')}`, changes: [{ from: at, to: at, insert: missing.map(k => `\n${indent}${k} = "${metaDefault(k)}"`).join('') }] });
                 } else {
                     const at = rule.openBrace + 1;
-                    fixes.push({ label: 'Add a meta section', changes: [{ from: at, to: at, insert: `\n    meta:${missing.map(k => `\n        ${k} = ""`).join('')}` }] });
+                    fixes.push({ label: 'Add a meta section', changes: [{ from: at, to: at, insert: `\n    meta:${missing.map(k => `\n        ${k} = "${metaDefault(k)}"`).join('')}` }] });
                 }
                 add(rule.nameFrom, rule.nameTo, 'info', `Missing meta: ${missing.join(', ')}`, 'missing-meta', fixes);
+            }
+        }
+
+        // meta id: Rulezet keeps it as the rule's original uuid, so it must be one and be unique
+        for (const m of rule.meta) {
+            if (m.key !== 'id' && m.key !== 'uuid') continue;
+            if (m.valueType === 'string' && !UUID.test(m.value)) {
+                add(m.valueFrom, m.valueTo, 'warning', `"${m.key}" is not a UUID: Rulezet uses it as the rule's identifier`, 'meta-id-format',
+                    [{ label: 'Replace with a new UUID', changes: [{ from: m.valueFrom, to: m.valueTo, insert: '"{{uuid}}"' }] }]);
+            } else if (m.valueType === 'string') {
+                const other = metaIds.get(m.value.toLowerCase());
+                if (other) add(m.valueFrom, m.valueTo, 'warning', `Same ${m.key} as rule "${other}": every rule needs its own UUID`, 'meta-id-duplicate',
+                    [{ label: 'Replace with a new UUID', changes: [{ from: m.valueFrom, to: m.valueTo, insert: '"{{uuid}}"' }] }]);
+                else metaIds.set(m.value.toLowerCase(), rule.name);
             }
         }
 
@@ -104,7 +135,7 @@ export function lint(parsed, options = {}) {
                 if (!rule.strings.length) refs.them.forEach(t => add(t.from, t.to, 'error', '"them" used but the rule has no strings', 'them-without-strings'));
             }
             for (const s of rule.strings) {
-                if (!used.has(s) && s.name !== '') {
+                if (!used.has(s)) {
                     add(s.idFrom, s.idTo, 'error', `String ${s.id} is never used in the condition (YARA refuses unreferenced strings)`, 'unused-string', [
                         { label: `Use ${s.id} in the condition`, changes: [{ from: rule.condition.to, to: rule.condition.to, insert: ` and ${s.id}` }] },
                         { label: `Remove ${s.id}`, changes: [removeLine(text, s.from, s.to)] },
@@ -126,9 +157,16 @@ export function lint(parsed, options = {}) {
                 }
             }
             for (const t of refs.idents) {
+                if (text[t.to] === '*') {
+                    // rule set "any of (name*)"
+                    if (![...defined].some(n => n.startsWith(t.value))) {
+                        add(t.from, t.to + 1, 'warning', `No rule before this one starts with "${t.value}" in this document (rules from another file?)`, 'external-rule');
+                    }
+                    continue;
+                }
                 if (defined.has(t.value)) continue;
                 if (t.value === rule.name) {
-                    add(t.from, t.to, 'error', `Rule "${t.value}" refers to itself`, 'self-reference');
+                    add(t.from, t.to, 'warning', `Rule "${t.value}" refers to itself`, 'self-reference');
                 } else if (allNames.has(t.value)) {
                     add(t.from, t.to, 'error', `Rule "${t.value}" is used before it is defined (move it above)`, 'rule-order');
                 } else if (MODULES[t.value]) {
@@ -153,6 +191,13 @@ export function lint(parsed, options = {}) {
         }
     }
     return out;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Value put by the "add missing meta" fix; {{uuid}} and {{date}} are filled in by the core. */
+function metaDefault(key) {
+    return key === 'id' || key === 'uuid' ? '{{uuid}}' : key === 'date' ? '{{date}}' : '';
 }
 
 function checkString(s, add, opts) {
@@ -187,7 +232,6 @@ function checkString(s, add, opts) {
     }
 
     if (s.kind === 'text' && s.closed) {
-        checkTextEscapes(s.raw).forEach(e => add(s.valueFrom + e.offset, s.valueFrom + e.offset + e.length, 'error', e.message, 'escape'));
         const len = textByteLength(s.raw);
         if (len === 0) add(s.valueFrom, s.valueTo, 'error', 'Empty string', 'empty-string');
         else if (opts.performance && len < 4 && !names.has('base64') && !names.has('xor'))
@@ -200,6 +244,10 @@ function checkString(s, add, opts) {
             if (h.fixedBytes < 3) add(s.valueFrom, s.valueTo, 'info', `Only ${h.fixedBytes} fixed byte${h.fixedBytes === 1 ? '' : 's'}: may slow down scanning`, 'perf-short-hex');
             else if (h.leadingWildcard) add(s.valueFrom, s.valueTo, 'info', 'Hex string starts with a wildcard: start with fixed bytes for faster scanning', 'perf-hex-wildcard');
         }
+    }
+    if (s.kind === 'regex' && s.closed) {
+        const body = s.raw.slice(1, s.raw.lastIndexOf('/'));
+        checkRegex(body).forEach(e => add(s.valueFrom + 1 + e.offset, s.valueFrom + 1 + e.offset + e.length, 'error', e.message, 'regex'));
     }
     if (s.kind === 'regex' && s.closed && opts.performance) {
         const body = s.raw.slice(1, s.raw.lastIndexOf('/'));

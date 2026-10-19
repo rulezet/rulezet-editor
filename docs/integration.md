@@ -128,7 +128,8 @@ Without any server at all, `RulezetHost` calls the public Rulezet API straight f
 | `lookupExternalRules` | `true` | ask the host about rules used but not defined |
 | `lint`, `format` | `{}` | options for the pack (YARA: `requireMeta`, `performance`; `indent`, `braceOnNewLine`, `alignEquals`, `normalizeHex`) |
 | `draftKey` | `null` | autosave drafts under this key |
-| `lineWrapping` | `false` | |
+| `author` | `null` | default author offered by the "Set author" rule tool (Rulezet: the logged-in user) |
+| `lineWrapping` | `null` | wrap long lines (line numbers stay the real ones); `null` = the viewer's last choice, off by default. Toolbar button, Alt+Z, `setLineWrapping(on)` |
 
 ## Methods and events
 
@@ -136,7 +137,7 @@ Methods: `getValue()`, `setValue(text)`, `getLanguage()`, `setLanguage(id)`, `ge
 `getDiagnostics()`, `getModel()`, `format()`, `validate()`, `goTo(pos | {line})`, `insertText(text)`,
 `newRule()`, `goToDefinition()`, `startRename()`, `openPalette()`, `execCommand(id)`,
 `toggleOutline()`, `toggleProblems()`, `toggleFullscreen()`, `setTheme()`, `setReadOnly()`,
-`clearDraft()`, `focus()`, `destroy()`.
+`openRuleTools()`, `runAction(id, value?)`, `toggleSearch()`, `setLineWrapping(on)`, `toggleLineWrapping()`, `clearDraft()`, `focus()`, `destroy()`.
 
 Events (`editor.on(name, fn)`): `ready`, `change`, `diagnostics`, `validated`, `format`, `save`,
 `language`.

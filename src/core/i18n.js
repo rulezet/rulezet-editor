@@ -2,7 +2,7 @@
 const STRINGS = {
     en: {
         format: 'Format', outline: 'Rules', problems: 'Problems', palette: 'Commands', theme: 'Theme',
-        fullscreen: 'Full screen', noProblems: 'No problems', rules: 'rules', rule: 'rule',
+        fullscreen: 'Full screen', wrap: 'Wrap lines', search: 'Search', ruleTools: 'Rule tools', noRuleHere: 'Put the cursor inside a rule', nothingToDo: 'Nothing to change', noProblems: 'No problems', rules: 'rules', rule: 'rule',
         line: 'Ln', col: 'Col', filterRules: 'Filter rules', filterCommands: 'Type a command',
         noRules: 'No rule in this document', renameTo: 'Rename to', rename: 'Rename', cancel: 'Cancel',
         draftFound: 'An unsaved draft from {time} was found.', restore: 'Restore', discard: 'Discard',
@@ -15,7 +15,7 @@ const STRINGS = {
     },
     fr: {
         format: 'Formater', outline: 'Règles', problems: 'Problèmes', palette: 'Commandes', theme: 'Thème',
-        fullscreen: 'Plein écran', noProblems: 'Aucun problème', rules: 'règles', rule: 'règle',
+        fullscreen: 'Plein écran', wrap: 'Retour à la ligne', search: 'Rechercher', ruleTools: 'Outils de règle', noRuleHere: 'Placez le curseur dans une règle', nothingToDo: 'Rien à modifier', noProblems: 'Aucun problème', rules: 'règles', rule: 'règle',
         line: 'Ln', col: 'Col', filterRules: 'Filtrer les règles', filterCommands: 'Tapez une commande',
         noRules: 'Aucune règle dans ce document', renameTo: 'Renommer en', rename: 'Renommer', cancel: 'Annuler',
         draftFound: 'Un brouillon non enregistré du {time} a été trouvé.', restore: 'Restaurer', discard: 'Ignorer',

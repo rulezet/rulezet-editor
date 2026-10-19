@@ -32,6 +32,8 @@ export const ICONS = {
     palette: svg('<rect x="1.5" y="3" width="13" height="10" rx="1.5"/><path d="M4 6.5l2 1.5-2 1.5M7.5 10h4"/>'),
     sun: svg('<circle cx="8" cy="8" r="3"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M3 13l1-1M12 4l1-1"/>'),
     moon: svg('<path d="M13 9.5A5.5 5.5 0 1 1 6.5 3a4.5 4.5 0 0 0 6.5 6.5z"/>'),
+    search: svg('<circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4 14 14"/>'),
+    wrap: svg('<path d="M2 4h12M2 8h9.5a2.5 2.5 0 0 1 0 5H8M9.5 11 8 13l1.5 2M2 12h3"/>'),
     expand: svg('<path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/>'),
     collapse: svg('<path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4"/>'),
     cloud: svg('<path d="M4.5 12.5h7.5a3 3 0 0 0 .3-6A4.5 4.5 0 0 0 3.6 7.6 2.5 2.5 0 0 0 4.5 12.5z"/>'),
@@ -39,6 +41,8 @@ export const ICONS = {
     close: svg('<path d="M4 4l8 8M12 4l-8 8"/>'),
     search: svg('<circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/>'),
     link: svg('<path d="M6.5 9.5l3-3M7 4.5l1.2-1.2a2.8 2.8 0 0 1 4 4L11 8.5M9 11.5l-1.2 1.2a2.8 2.8 0 0 1-4-4L5 7.5"/>'),
+    edit: svg('<path d="M10.5 2.5l3 3L6 13H3v-3z"/>'),
+    tools: svg('<path d="M9.5 2.5a3 3 0 0 0 3.9 3.9L8 11.8 4.2 8z"/><path d="M5.5 9.5 2.5 12.5l1 1 3-3"/>'),
     plus: svg('<path d="M8 3v10M3 8h10"/>'),
 };
 

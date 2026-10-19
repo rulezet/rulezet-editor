@@ -1,0 +1,1342 @@
+[
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: any of them }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: 2 of ($a, $b) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: 50% of them }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: filesize of them }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: 1+1 of them }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: any of them at 0 }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: all of them and $a at 0 and $b in (0..100) and #a in (0..5) > 1 }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: @a[1] > 0 and !a[1] > 0 and @a > 0 and !a > 0 and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: for any i in (1..#a) : (@a[i] > 0) and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: for all i in (1,2,3) : (i > 0) and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: for any of them : ($ at 0) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: for 2 of ($a,$b) : (# > 1 and @ > 0 and ! > 0) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $ and $a and $b }",
+  "error": "line 4: wrong use of anonymous string"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: # > 0 and $a and $b }",
+  "error": "line 4: wrong use of anonymous string"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: with x = 1 : (x == 1) and $a and $b }",
+  "error": "line 4: undefined identifier \"with\""
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: defined filesize and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: not defined 1 and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: \"a\" contains \"b\" and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: \"a\" matches /b/is and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: filesize matches /x/ and $a and $b }",
+  "error": "line 4: wrong type \"integer\" for matches operator"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a matches /x/ and $b }",
+  "error": "line 4: syntax error, unexpected <matches>, expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: them }",
+  "error": "line 4: syntax error, unexpected <them>"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a* }",
+  "error": "line 4: syntax error, unexpected string identifier with wildcard"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: any of ($a*, $b) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: any of ($*) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: -1 < 2 and ~1 == 0 and 1 \\ 2 == 0 and 2 ^ 3 | 4 & 5 << 1 >> 1 == 0 and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: 1.5 > 1 and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: 1 and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: \"x\" and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a + 1 and $b }",
+  "error": "line 4: syntax error, unexpected '+', expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: filesize + \"a\" and $a and $b }",
+  "error": "line 4: type mismatch"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: 0x10 == 16 and 0o17 == 15 and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: 1KB == 1024 and 1MB > 0 and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: uint32be(0) == 0 and int8(0) == 0 and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: uint32 == 0 and $a and $b }",
+  "error": "line 4: syntax error, unexpected ==, expecting '('"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: entrypoint == 0 and $a and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: ($a or $b) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: (($a) and ($b)) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and and $b }",
+  "error": "line 4: syntax error, unexpected <and>"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a $b }",
+  "error": "line 4: syntax error, unexpected string identifier, expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b or }",
+  "error": "line 4: syntax error, unexpected '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a in (0..) }",
+  "error": "line 4: syntax error, unexpected ')'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a in 0..10 and $b }",
+  "error": "line 4: syntax error, unexpected integer number, expecting '('"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a at and $b }",
+  "error": "line 4: syntax error, unexpected <and>"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: for any i in (1..3) : i > 0 and $a and $b }",
+  "error": "line 4: syntax error, unexpected identifier, expecting '('"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: for any i in (1..3) (i>0) and $a and $b }",
+  "error": "line 4: syntax error, unexpected '(', expecting ':'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: all of them : ($) }",
+  "error": "line 4: syntax error, unexpected ':', expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: none of them }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: any of them in (0..filesize) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: #a == 1 and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: #a[1] == 1 and $b }",
+  "error": "line 4: syntax error, unexpected '[', expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: @a == 1 and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: !a[1] == 1 and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a[1] and $b }",
+  "error": "line 4: syntax error, unexpected '[', expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: (1..2) and $a and $b }",
+  "error": "line 4: syntax error, unexpected .., expecting <or> or <and>"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 1 == 1 == 1 }",
+  "error": "line 4: syntax error, unexpected ==, expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 1 < 2 < 3 }",
+  "error": "line 4: syntax error, unexpected <, expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and not not true }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and - - 1 }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and (1) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and () }",
+  "error": "line 4: syntax error, unexpected ')'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: all of ($a, $b,) }",
+  "error": "line 4: syntax error, unexpected ')', expecting string identifier or string identifier with wildcard"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: all of () }",
+  "error": "line 4: syntax error, unexpected ')', expecting string identifier or string identifier with wildcard"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: any of $a }",
+  "error": "line 4: syntax error, unexpected string identifier, expecting <them> or '('"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: any of ($a $b) }",
+  "error": "line 4: syntax error, unexpected string identifier, expecting ')' or ','"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: any them }",
+  "error": "line 4: syntax error, unexpected <them>, expecting <of>"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: of them }",
+  "error": "line 4: syntax error, unexpected <of>"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 1 of them of them }",
+  "error": "line 4: syntax error, unexpected <of>, expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: 3 of them }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: 0 of them }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and \"a\" == \"a\" and \"a\" != 1 }",
+  "error": "line 4: type mismatch"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 1 contains 2 }",
+  "error": "line 4: wrong type \"integer\" for contains operator"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and \"a\" iequals \"A\" }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and filesize in (0..1) }",
+  "error": "line 4: syntax error, unexpected <in>, expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and for any x, y in (0..1) : (true) }",
+  "error": "line 4: iterator yields one value on each iteration , but the loop expects 2"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and for i in (0..1) : (true) }",
+  "error": "line 4: undefined identifier \"i\""
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and for any of ($a) : ($) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: any of ($a) and for any s in (\"a\",\"b\") : (s == \"a\") and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 1.5 == 1 }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 1.5 & 1 == 0 }",
+  "error": "line 4: wrong type \"float\" for ^ operator"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and \"a\" < \"b\" }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and true == true }",
+  "error": "line 4: syntax error, unexpected ==, expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and filesize == true }",
+  "error": "line 4: syntax error, unexpected <true>"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and (1 == 1) == true }",
+  "error": "line 4: syntax error, unexpected ==, expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and -\"a\" == 1 }",
+  "error": "line 4: wrong type \"string\" for - operator"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and ~1.5 == 1 }",
+  "error": "line 4: wrong type \"float\" for ~ operator"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and uint8(\"a\") == 1 }",
+  "error": "line 4: wrong type \"string\" for intXXXX or uintXXXX operator"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and $a at \"x\" }",
+  "error": "line 4: wrong type \"string\" for at operator"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and #a in (0..\"x\") == 1 }",
+  "error": "line 4: wrong type for range's upper bound"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and @a[\"x\"] == 1 }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 1 % 2 == 1 }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 1.5 % 2 == 1 }",
+  "error": "line 4: wrong type \"float\" for % operator"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 1 \\ 2.5 > 0 }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 10 % of them }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 101% of them }",
+  "error": "line 4: percentage must be between 1 and 100 (inclusive)"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 0x of them }",
+  "error": "line 4: syntax error, unexpected identifier, expecting '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and for any i in (1..3) : ( for any j in (1..i) : (j > 0) ) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and for any i in (1..3) : (j > 0) }",
+  "error": "line 4: undefined identifier \"j\""
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and i > 0 }",
+  "error": "line 4: undefined identifier \"i\""
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and not }",
+  "error": "line 4: syntax error, unexpected '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and defined }",
+  "error": "line 4: syntax error, unexpected '}'"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: not $a and not $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and r2 }",
+  "error": "line 4: undefined identifier \"r2\""
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: any of (r2, r3*) }",
+  "error": "line 4: undefined identifier \"r2\""
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and #a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and @a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and !a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and # }",
+  "error": "line 4: wrong use of anonymous string"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and for any of ($a, $b) : (#) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: for all of ($a*) : ($ in (0..10)) and $b }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and \"\\x41\" == \"A\" }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and \"\\q\" == \"A\" }",
+  "error": "line 4: syntax error, unexpected end of file"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and filesize > 1KB*2 }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and 2 of ($a, $b) in (0..10) }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and any of ($a, $b) at 0 }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abcd\"\n $b = \"efgh\"\ncondition: $a and $b and all of them in (0..1) == 1 }",
+  "error": "line 4: syntax error, unexpected ==, expecting '}'"
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: math.entropy(0, filesize) > 7 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.number_of_sections > 0 and pe.sections[0].name == \".text\" }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.imports(\"k.dll\") }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.imports(/k/, /x/) }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.version_info[\"CompanyName\"] == \"x\" }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: for any s in pe.sections : (s.name == \".text\") }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: for any k, v in pe.version_info : (k == \"x\") }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.foo }",
+  "error": "line 9: invalid field name \"foo\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.sections }",
+  "error": "line 9: wrong usage of identifier \"sections\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.number_of_sections() }",
+  "error": "line 9: \"number_of_sections\" is not a function"
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.imports }",
+  "error": "line 9: wrong usage of identifier \"imports\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.imports(\"a\", 1, 2, 3) }",
+  "error": "line 9: wrong arguments for function \"imports\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.is_dll }",
+  "error": "line 9: wrong usage of identifier \"is_dll\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.is_dll() }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.sections[0] }",
+  "error": "line 9: wrong usage of identifier \"sections\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.sections[\"x\"].name == \"\" }",
+  "error": "line 9: array indexes must be of integer type"
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.version_info[0] == \"x\" }",
+  "error": "line 9: dictionary keys must be of string type"
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.sections[0].foo == 1 }",
+  "error": "line 9: invalid field name \"foo\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: math.entropy(\"a\") > 1 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: math.entropy(1) > 1 }",
+  "error": "line 9: wrong arguments for function \"entropy\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: math.entropy() > 1 }",
+  "error": "line 9: wrong arguments for function \"entropy\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: hash.md5(0, filesize) == \"x\" }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: hash.md5(0, filesize) == 1 }",
+  "error": "line 9: type mismatch"
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: hash.md5(\"a\") == \"x\" }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.machine == pe.MACHINE_I386 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.MACHINE_I386() }",
+  "error": "line 9: \"MACHINE_I386\" is not a function"
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.number_of_sections == \"x\" }",
+  "error": "line 9: type mismatch"
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.characteristics & pe.DLL }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: for any s in pe.sections : (s.foo == 1) }",
+  "error": "line 9: invalid field name \"foo\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: for any i in (0..pe.number_of_sections - 1) : (pe.sections[i].name == \".x\") }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: for any s, t in pe.sections : (true) }",
+  "error": "line 9: iterator for \"sections\" yields a single item on each iteration, but the loop expects 2"
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: for any k in pe.version_info : (true) }",
+  "error": "line 9: iterator for \"version_info\" yields a key,value pair item on each iteration"
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: dotnet.number_of_guids > 0 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: elf.type == elf.ET_EXEC }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: time.now() > 0 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: string.length(\"a\") == 1 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: string.to_int(\"1\") == 1 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: console.log(\"x\") }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: math.to_number(true) == 1 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: math.to_number(1 == 1) == 1 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.exports(1) }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.exports(/a/) }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.section_index(\".text\") >= 0 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.rich_signature.toolid(1) }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.signatures[0].issuer contains \"x\" }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.data_directories[pe.IMAGE_DIRECTORY_ENTRY_EXPORT].size > 0 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: math.in_range(1.0, 0.0, 2.0) }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: math.in_range(1, 0, 2) }",
+  "error": "line 9: wrong arguments for function \"in_range\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.imports(\"a\", \"b\") == 1 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.imports(pe.IMPORT_DELAYED, \"a\", \"b\") }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: math.max(1, \"a\") == 1 }",
+  "error": "line 9: wrong arguments for function \"max\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: math.mean(0, filesize) > 1.5 }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: not pe.is_dll() }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.entry_point }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.sections[0].name }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.linker_version.major }",
+  "error": null
+ },
+ {
+  "text": "import \"pe\"\nimport \"math\"\nimport \"hash\"\nimport \"dotnet\"\nimport \"elf\"\nimport \"time\"\nimport \"string\"\nimport \"console\"\nrule r { condition: pe.linker_version }",
+  "error": "line 9: wrong usage of identifier \"linker_version\""
+ },
+ {
+  "text": "\nrule r { condition: pe.number_of_sections > 0 }",
+  "error": "line 2: undefined identifier \"pe\""
+ },
+ {
+  "text": "\nrule r { condition: foo.bar > 0 }",
+  "error": "line 2: undefined identifier \"foo\""
+ },
+ {
+  "text": "import \"foo\"\nrule r { condition: true }",
+  "error": "line 1: unknown module \"foo\""
+ },
+ {
+  "text": "import \"pe\"\nimport \"pe\"\nrule r { condition: true }",
+  "error": null
+ },
+ {
+  "text": "import \"macho\"\nrule r { condition: true }",
+  "error": "line 1: unknown module \"macho\""
+ },
+ {
+  "text": "import \"magic\"\nrule r { condition: true }",
+  "error": "line 1: unknown module \"magic\""
+ },
+ {
+  "text": "import \"dex\"\nrule r { condition: true }",
+  "error": "line 1: unknown module \"dex\""
+ },
+ {
+  "text": "import pe\nrule r { condition: true }",
+  "error": "line 1: syntax error, unexpected identifier, expecting text string"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" nocase\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" wide ascii\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" fullword private\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" xor\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" xor(1)\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" xor(1-255)\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" xor(0x01-0xff)\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" xor(256)\ncondition: $a }",
+  "error": "line 2: invalid xor range"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" xor(5-2)\ncondition: $a }",
+  "error": "line 2: xor lower bound exceeds upper bound"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" xor()\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected ')', expecting integer number"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" xor(-1)\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected '-', expecting integer number"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" base64\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" base64wide\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" base64(\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/\")\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" base64(\"abc\")\ncondition: $a }",
+  "error": "line 2: length of base64 alphabet must be 64"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" base64(1)\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected integer number, expecting text string"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" nocase xor\ncondition: $a }",
+  "error": "line 2: invalid modifier combination: xor nocase"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" base64 xor\ncondition: $a }",
+  "error": "line 2: invalid modifier combination: base64 xor"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" base64 fullword\ncondition: $a }",
+  "error": "line 2: invalid modifier combination: base64 fullword"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" base64 nocase\ncondition: $a }",
+  "error": "line 2: invalid modifier combination: base64 nocase"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" base64 wide\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" xor wide\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" xor fullword\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" nocase nocase\ncondition: $a }",
+  "error": "line 2: duplicated modifier"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" foo\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected identifier, expecting <condition>"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 42 } nocase\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected <nocase>, expecting <condition>"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 42 } wide\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected <wide>, expecting <condition>"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 42 } private\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 42 } xor\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected <xor>, expecting <condition>"
+ },
+ {
+  "text": "\nrule r { strings: $a = /abc/ nocase wide ascii fullword private\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = /abc/ xor\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected <xor>, expecting <condition>"
+ },
+ {
+  "text": "\nrule r { strings: $a = /abc/ base64\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected <base64>, expecting <condition>"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\" base64 base64wide\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"ab\"\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"\"\ncondition: $a }",
+  "error": "line 2: empty string \"$a\""
+ },
+ {
+  "text": "\nrule r { strings: $a = \"a\"\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"\\x4\"\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected end of file, expecting text string"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"\\q\"\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected end of file, expecting text string"
+ },
+ {
+  "text": "\nrule r { strings: $a = \"\\n\\t\\r\\\\\\\"\"\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"\\x41\\x42\"\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = \"abc\ncondition: $a }",
+  "error": "line 3: syntax error, unexpected end of file, expecting text string"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 42 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 4 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": uneven number of digits in hex string"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 4 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": uneven number of digits in hex string"
+ },
+ {
+  "text": "\nrule r { strings: $a = { }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ?? 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 4? ?3 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [2] 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { [2] 41 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [2] }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [2-1] 43 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": invalid jump range"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [-] 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [2-] 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [0] 43 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": invalid jump length"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [0-0] 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ( 42 | 43 ) 44 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ( 42 | 43 44 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 42 | 43 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ( 42 | [1-] 43 ) 44 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ( 42 | [1-2] 43 ) 44 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ~42 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ~4? 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ~?? 43 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": invalid not operator (~) in hex string"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 G2 43 }\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected '{', expecting text string"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 42 // c\n 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 /* c */ 42 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { ?? 41 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ?? }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ( 42 ) 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 () 43 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ( 42 | ) 43 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [1-300] 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [1-70000] 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [9999999999] 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 [1-2] [3] 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 42 43 } nocase\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected <nocase>, expecting <condition>"
+ },
+ {
+  "text": "\nrule r { strings: $a = { ( 41 | 42 ) 43 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ( 42 ( 43 | 44 ) | 45 ) 46 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { ~41 42 }\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = { 41 ~ 42 }\ncondition: $a }",
+  "error": "line 2: invalid hex string \"$a\": invalid not operator (~) in hex string"
+ },
+ {
+  "text": "\nrule r { strings: $a = /abc/is\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = /abc/x\ncondition: $a }",
+  "error": "line 2: syntax error, unexpected identifier, expecting <condition>"
+ },
+ {
+  "text": "\nrule r { strings: $a = /(?:a)/\ncondition: $a }",
+  "error": "line 2: invalid regular expression \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = /a\\1/\ncondition: $a }",
+  "error": "line 2: invalid regular expression \"$a\": backreferences are not allowed"
+ },
+ {
+  "text": "\nrule r { strings: $a = /a{2,1}/\ncondition: $a }",
+  "error": "line 2: invalid regular expression \"$a\": bad repeat interval"
+ },
+ {
+  "text": "\nrule r { strings: $a = /[z-a]/\ncondition: $a }",
+  "error": "line 2: invalid regular expression \"$a\": bad character range"
+ },
+ {
+  "text": "\nrule r { strings: $a = /a{40000}/\ncondition: $a }",
+  "error": "line 2: invalid regular expression \"$a\": repeat interval too large"
+ },
+ {
+  "text": "\nrule r { strings: $a = /a*?b+/\ncondition: $a }",
+  "error": "line 2: greedy and ungreedy quantifiers can't be mixed in a regular expression"
+ },
+ {
+  "text": "\nrule r { strings: $a = /a(b/\ncondition: $a }",
+  "error": "line 2: invalid regular expression \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = /a[/\ncondition: $a }",
+  "error": "line 2: invalid regular expression \"$a\": missing terminating ] for character class"
+ },
+ {
+  "text": "\nrule r { strings: $a = /a/\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = /a\\x4/\ncondition: $a }",
+  "error": "line 2: invalid regular expression \"$a\": illegal escape sequence"
+ },
+ {
+  "text": "\nrule r { strings: $a = /\\babc\\b/\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "\nrule r { strings: $a = /a$*/\ncondition: $a }",
+  "error": "line 2: invalid regular expression \"$a\": syntax error"
+ },
+ {
+  "text": "\nrule r { strings: $a = /ab/s nocase\ncondition: $a }",
+  "error": null
+ },
+ {
+  "text": "rule r { condition: true }\nrule r { condition: true }",
+  "error": "line 2: duplicated identifier \"r\""
+ },
+ {
+  "text": "rule r : t1 t2 { condition: true }",
+  "error": null
+ },
+ {
+  "text": "rule r : t1 t1 { condition: true }",
+  "error": "line 1: duplicated tag identifier \"t1\""
+ },
+ {
+  "text": "rule r : { condition: true }",
+  "error": "line 1: syntax error, unexpected '{', expecting identifier"
+ },
+ {
+  "text": "rule r : 1x { condition: true }",
+  "error": "line 1: syntax error, unexpected integer number, expecting identifier"
+ },
+ {
+  "text": "private rule r { condition: true }",
+  "error": null
+ },
+ {
+  "text": "global rule r { condition: true }",
+  "error": null
+ },
+ {
+  "text": "private global rule r { condition: true }",
+  "error": null
+ },
+ {
+  "text": "global private rule r { condition: true }",
+  "error": null
+ },
+ {
+  "text": "private private rule r { condition: true }",
+  "error": null
+ },
+ {
+  "text": "rule condition { condition: true }",
+  "error": "line 1: syntax error, unexpected <condition>, expecting identifier"
+ },
+ {
+  "text": "rule all { condition: true }",
+  "error": "line 1: syntax error, unexpected <all>, expecting identifier"
+ },
+ {
+  "text": "rule with { condition: true }",
+  "error": null
+ },
+ {
+  "text": "rule pe { condition: true }",
+  "error": null
+ },
+ {
+  "text": "rule _x { condition: true }",
+  "error": null
+ },
+ {
+  "text": "rule 1x { condition: true }",
+  "error": "line 1: syntax error, unexpected integer number, expecting identifier"
+ },
+ {
+  "text": "rule aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa { condition: true }",
+  "error": null
+ },
+ {
+  "text": "rule aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa { condition: true }",
+  "error": "line 1: syntax error, unexpected end of file, expecting identifier"
+ },
+ {
+  "text": "rule r { meta: a = \"x\" b = 1 c = true d = -1 e = false condition: true }",
+  "error": null
+ },
+ {
+  "text": "rule r { meta: a = x condition: true }",
+  "error": "line 1: syntax error, unexpected identifier"
+ },
+ {
+  "text": "rule r { meta: a = \"x\" a = \"y\" condition: true }",
+  "error": null
+ },
+ {
+  "text": "rule r { meta: a = 1.5 condition: true }",
+  "error": "line 1: syntax error, unexpected floating point number"
+ },
+ {
+  "text": "rule r { meta: a = \"\\q\" condition: true }",
+  "error": "line 1: syntax error, unexpected end of file"
+ },
+ {
+  "text": "rule r { meta: condition: true }",
+  "error": "line 1: syntax error, unexpected <condition>, expecting identifier"
+ },
+ {
+  "text": "rule r { strings: condition: true }",
+  "error": "line 1: syntax error, unexpected <condition>, expecting string identifier"
+ },
+ {
+  "text": "rule r { condition: }",
+  "error": "line 1: syntax error, unexpected '}'"
+ },
+ {
+  "text": "rule r { }",
+  "error": "line 1: syntax error, unexpected hex string, expecting '{'"
+ },
+ {
+  "text": "rule r { condition: true",
+  "error": "line 0: syntax error, unexpected end of file, expecting '}'"
+ },
+ {
+  "text": "rule r { strings: $a = \"abcd\" $a = \"efgh\" condition: $a }",
+  "error": "line 1: duplicated string identifier \"$a\""
+ },
+ {
+  "text": "rule r { strings: $a = \"abcd\" condition: true }",
+  "error": "line 1: unreferenced string \"$a\""
+ },
+ {
+  "text": "rule r { strings: $ = \"abcd\" condition: true }",
+  "error": "line 1: unreferenced string \"$\""
+ },
+ {
+  "text": "rule r { strings: $ = \"abcd\" $ = \"efgh\" condition: all of them }",
+  "error": null
+ },
+ {
+  "text": "rule r { strings: $a = \"abcd\" condition: $b }",
+  "error": "line 1: undefined string \"$b\""
+ },
+ {
+  "text": "rule r { strings: $a = \"abcd\" $ab = \"efgh\" condition: $a* }",
+  "error": "line 1: syntax error, unexpected string identifier with wildcard"
+ },
+ {
+  "text": "rule r { strings: $a1 = \"abcd\" condition: $a* }",
+  "error": "line 1: syntax error, unexpected string identifier with wildcard"
+ },
+ {
+  "text": "rule r { strings: $a1 = \"abcd\" condition: any of ($b*) }",
+  "error": "line 1: undefined string \"$b*\""
+ },
+ {
+  "text": "rule r { strings: $a1 = \"abcd\" condition: any of ($a*) }",
+  "error": null
+ },
+ {
+  "text": "rule r { condition: them }",
+  "error": "line 1: syntax error, unexpected <them>"
+ },
+ {
+  "text": "rule r { condition: any of them }",
+  "error": "line 1: undefined string \"$*\""
+ },
+ {
+  "text": "rule r { strings: $a* = \"abcd\" condition: $a }",
+  "error": "line 1: syntax error, unexpected string identifier with wildcard, expecting string identifier"
+ },
+ {
+  "text": "rule a { condition: true }\nrule b { condition: a }",
+  "error": null
+ },
+ {
+  "text": "rule b { condition: a }\nrule a { condition: true }",
+  "error": "line 1: undefined identifier \"a\""
+ },
+ {
+  "text": "rule a { condition: a }",
+  "error": null
+ },
+ {
+  "text": "rule a { condition: true }\nrule b { condition: any of (a, c) }",
+  "error": "line 2: undefined identifier \"c\""
+ },
+ {
+  "text": "rule a1 { condition: true }\nrule a2 { condition: true }\nrule b { condition: any of (a*) }",
+  "error": null
+ },
+ {
+  "text": "rule b { condition: any of (z*) }",
+  "error": "line 1: undefined identifier \"z\""
+ },
+ {
+  "text": "rule r { condition: true } garbage",
+  "error": "line 1: syntax error, unexpected identifier"
+ },
+ {
+  "text": "import \"pe\" rule r { condition: pe.is_dll() }",
+  "error": null
+ },
+ {
+  "text": "include \"x.yar\"",
+  "error": "line 1: can't open include file: x.yar"
+ },
+ {
+  "text": "rule r { condition: true }}",
+  "error": "line 1: syntax error, unexpected '}'"
+ },
+ {
+  "text": "rule r { meta: description = \"x\" condition: true }",
+  "error": null
+ },
+ {
+  "text": "rule r { condition: entrypoint == 0 }",
+  "error": null
+ },
+ {
+  "text": "rule r { strings: $a = \"ab\" condition: $a and 1 }",
+  "error": null
+ },
+ {
+  "text": "rule r\n{\n strings:\n  $a = \"abcd\" wide nocase\n condition:\n  $a\n}",
+  "error": null
+ },
+ {
+  "text": "rule r { strings: $a = \"abcd\" private condition: $a }",
+  "error": null
+ },
+ {
+  "text": "rule r { strings: $a = { 41 } condition: $a }",
+  "error": null
+ },
+ {
+  "text": "rule r { condition: filesize > 10MB }",
+  "error": null
+ },
+ {
+  "text": "rule r { condition: 10 KB }",
+  "error": "line 1: syntax error, unexpected identifier, expecting '}'"
+ },
+ {
+  "text": "rule r { condition: 1.0.0 }",
+  "error": "line 1: syntax error, unexpected '.', expecting '}'"
+ }
+]

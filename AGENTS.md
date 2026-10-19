@@ -50,7 +50,7 @@ Every pack feature is optional and capability-driven: the core shows a feature o
 npm install
 npm run dev      # playground on http://127.0.0.1:5173/, rebuilds dist/ on change,
                  # proxies /api and /rule to RULEZET_URL (default http://127.0.0.1:7009)
-npm test         # node --test: YARA tests + conformance suite for every pack
+npm test         # node --test: YARA tests, conformance suite for every pack, lint vs libyara oracle
 npm run build    # dist/rulezet-editor.js (ESM), dist/rulezet-editor.iife.js, dist/rulezet-editor.css
 
 # server (Python)
@@ -93,7 +93,11 @@ src/languages/yara/          reference pack:
     navigation.js            hover, definition, references, rename
     format.js                formatter (keeps comments, skips broken rules)
     highlight.js             incremental tokenizer for highlighting
-    keywords.js, modules.js  vocabulary and module members (data only)
+    condition.js             condition grammar and types, as libyara (first syntax error, then types)
+    actions.js               rule tools: add date, id, tag, author, string, PE check...
+    keywords.js              vocabulary
+    modules.js               module helpers; modules-data.js is GENERATED from libyara
+                             (node scripts/yara-modules.mjs <yara source dir>)
 server/rulezet_editor/       Python server, no database:
     backends.py              Backend, LocalBackend, RulezetApiBackend, FunctionBackend, ChainBackend
     validators.py            local compilers per format (yara-python), optional
@@ -102,6 +106,7 @@ server/rulezet_editor/       Python server, no database:
 server/tests/                pytest
 pyproject.toml               Python package (installable from the submodule)
 test/                        *.test.js, run by node --test
+test/fixtures/yara-oracle.json  cases with libyara's verdict (scripts/yara-oracle/build.py)
 playground/                  demo page and samples
 scripts/                     build.mjs, dev.mjs
 docs/                        design, language-pack reference, host adapter, integration
@@ -118,6 +123,9 @@ docs/rulezet/                one file per feature: how it is integrated into Rul
   core re-finds the problem by `code` if the document changed before the fix is applied.
 - Use the code `external-rule` for references to rules not in the document: the core asks the host.
 - The formatter must be idempotent and must leave rules with errors untouched.
+- The YARA lint follows libyara 4.5 (the compiler Rulezet uses): an error only when the compiler
+  refuses the rule. Every new check gets a case in `scripts/yara-oracle/cases.py`, rebuilt with
+  yara-python. Rules missing from the document stay warnings (Rulezet may have them).
 - No colors in JS or in templates: add a `--rze-*` variable in the CSS (light and dark).
 - New UI text goes through `src/core/i18n.js` (English, French).
 - Integrated mode never calls rulezet.org: it uses the local Rulezet through `FunctionBackend`.

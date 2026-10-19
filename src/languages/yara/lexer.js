@@ -111,7 +111,7 @@ export function lex(text) {
         }
 
         // $a  $a*  $   #a  @a  !a
-        if (c === '$' || c === '#' || c === '@' || (c === '!' && IDENT_START.test(text[i + 1] || ''))) {
+        if (c === '$' || c === '#' || c === '@' || (c === '!' && text[i + 1] !== '=')) {
             let j = i + 1;
             while (j < n && IDENT_PART.test(text[j])) j++;
             let wildcard = false;
@@ -125,10 +125,10 @@ export function lex(text) {
         // numbers: 0x1F, 0o17, 10, 1.5, 10KB, 2MB
         if (/[0-9]/.test(c)) {
             let j = i;
-            if (c === '0' && (text[i + 1] === 'x' || text[i + 1] === 'X')) {
+            if (c === '0' && (text[i + 1] === 'x' || text[i + 1] === 'X') && /[0-9a-fA-F]/.test(text[i + 2] || '')) {
                 j += 2;
                 while (j < n && /[0-9a-fA-F]/.test(text[j])) j++;
-            } else if (c === '0' && text[i + 1] === 'o') {
+            } else if (c === '0' && text[i + 1] === 'o' && /[0-7]/.test(text[i + 2] || '')) {
                 j += 2;
                 while (j < n && /[0-7]/.test(text[j])) j++;
             } else {
@@ -139,7 +139,9 @@ export function lex(text) {
                 }
                 if (text.startsWith('KB', j) || text.startsWith('MB', j)) j += 2;
             }
-            if (j < n && IDENT_PART.test(text[j])) {
+            // like libyara's lexer: "0x1Fand" is 0x1F then "and", but "10KBx" or "12abc" is not a number
+            if (j < n && IDENT_PART.test(text[j]) && !(/^0[xX]/.test(text.slice(i, j)) && /^(and|or|of|at|in)\b/.test(text.slice(j)))
+                && !(/^\d+$/.test(text.slice(i, j)) && /^(and|or|of|at|in)\b/.test(text.slice(j)))) {
                 let k = j;
                 while (k < n && IDENT_PART.test(text[k])) k++;
                 errors.push({ from: i, to: k, message: `Invalid number or identifier "${text.slice(i, k)}"` });

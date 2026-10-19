@@ -75,7 +75,13 @@ export class HttpHost extends LocalDraftHost {
         const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
         const timer = ctrl ? setTimeout(() => ctrl.abort(), this.timeout) : null;
         try {
-            const res = await this.fetch(this.baseUrl + path, { ...init, signal: ctrl ? ctrl.signal : undefined });
+            let res;
+            try {
+                res = await this.fetch(this.baseUrl + path, { ...init, signal: ctrl ? ctrl.signal : undefined });
+            } catch (e) {
+                if (e && e.name === 'AbortError') throw new Error(`${this.name} did not answer within ${Math.round(this.timeout / 1000)} s`);
+                throw new Error(`${this.name} not reachable: ${e.message || e}`);
+            }
             const data = await res.json().catch(() => ({}));
             if (!res.ok && !allow.includes(res.status)) {
                 const err = new Error(data.error || data.message || `HTTP ${res.status}`);

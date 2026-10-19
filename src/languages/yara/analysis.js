@@ -105,67 +105,108 @@ export function refMatches(ref, stringName) {
 }
 
 /**
- * Checks a hex string body. Returns {errors: [{offset, length, message}], bytes, leadingWildcard}
+ * Checks a hex string, with libyara's rules: bytes are two adjacent digits or "?", "~" sticks to
+ * a byte that is not "??", groups and alternatives are never empty and never start or end with a
+ * jump, unbounded jumps stay out of groups, [0] is refused.
+ * Returns {errors: [{offset, length, message}], bytes, fixedBytes, leadingWildcard};
  * offsets are relative to the raw token (including braces).
  */
 export function checkHex(raw) {
     const errors = [];
+    const err = (offset, length, message) => { if (!errors.length) errors.push({ offset, length, message }); };
     const closed = raw.endsWith('}');
     const body = raw.slice(1, closed ? -1 : undefined);
     const base = 1;
-    let nibbles = 0;
-    let bytes = 0;
-    let fixedBytes = 0;
-    let items = [];        // 'byte' | 'wild' | 'jump' | 'alt'
+    const isNibble = (c) => /[0-9a-fA-F?]/.test(c || '');
+
+    // tokens: byte | jump | ( | ) | "|"
+    const toks = [];
     let i = 0;
-    let depth = 0;
     while (i < body.length) {
         const c = body[i];
         if (/\s/.test(c)) { i++; continue; }
         if (body.startsWith('//', i)) { while (i < body.length && body[i] !== '\n') i++; continue; }
         if (body.startsWith('/*', i)) { const e = body.indexOf('*/', i + 2); i = e === -1 ? body.length : e + 2; continue; }
-        if (/[0-9a-fA-F?~]/.test(c)) {
-            if (c === '~') { i++; continue; }      // negation: applies to the next byte
-            nibbles++;
-            if (nibbles % 2 === 0) {
-                const pair = body.slice(i - 1, i + 1);
-                bytes++;
-                if (!pair.includes('?')) fixedBytes++;
-                items.push(pair.includes('?') ? 'wild' : 'byte');
+        if (c === '~') {
+            if (!isNibble(body[i + 1]) || !isNibble(body[i + 2]) || body.slice(i + 1, i + 3) === '??') {
+                err(base + i, 1, '"~" must be followed by a byte, like ~41 or ~4?, and not by ??');
+                i++;
+                continue;
             }
-            i++;
+            toks.push({ t: 'byte', at: i, wild: body.slice(i + 1, i + 3).includes('?'), not: true });
+            i += 3;
             continue;
         }
-        if (nibbles % 2 === 1) {
-            errors.push({ offset: base + i - 1, length: 1, message: 'Hex byte with a single digit' });
-            nibbles++;
+        if (isNibble(c)) {
+            if (!isNibble(body[i + 1])) { err(base + i, 1, 'Hex byte with a single digit: bytes are two digits, like 0F'); i++; continue; }
+            toks.push({ t: 'byte', at: i, wild: body.slice(i, i + 2).includes('?') });
+            i += 2;
+            continue;
         }
         if (c === '[') {
             const e = body.indexOf(']', i);
-            if (e === -1) { errors.push({ offset: base + i, length: 1, message: 'Unclosed jump "["' }); break; }
+            if (e === -1) { err(base + i, 1, 'Unclosed jump "["'); break; }
             const range = body.slice(i + 1, e).trim();
             const m = range.match(/^(\d*)\s*(-\s*(\d*))?$/);
-            if (!m || (!m[1] && !m[2])) errors.push({ offset: base + i, length: e - i + 1, message: `Invalid jump "[${range}]": use [n], [n-m], [n-] or [-]` });
-            else if (m[1] && m[3] && Number(m[1]) > Number(m[3])) errors.push({ offset: base + i, length: e - i + 1, message: `Invalid jump "[${range}]": lower bound above upper bound` });
-            if (depth > 0 && m && (!m[3] && m[2])) errors.push({ offset: base + i, length: e - i + 1, message: 'Unbounded jumps are not allowed inside alternatives' });
-            items.push('jump');
+            const len = e - i + 1;
+            if (!m || (!m[1] && !m[2])) err(base + i, len, `Invalid jump "[${range}]": use [n], [n-m], [n-] or [-]`);
+            else if (m[1] && m[3] && Number(m[1]) > Number(m[3])) err(base + i, len, `Invalid jump "[${range}]": lower bound above upper bound`);
+            else if (!m[2] && Number(m[1]) === 0) err(base + i, len, 'Invalid jump "[0]": a jump of zero bytes');
+            toks.push({ t: 'jump', at: i, len, unbounded: !!(m && m[2] && !m[3]) });
             i = e + 1;
             continue;
         }
-        if (c === '(') { depth++; items.push('alt'); i++; continue; }
-        if (c === ')') { depth--; if (depth < 0) errors.push({ offset: base + i, length: 1, message: 'Unbalanced ")"' }); i++; continue; }
-        if (c === '|') { if (depth === 0) errors.push({ offset: base + i, length: 1, message: '"|" outside of an alternative ( a | b )' }); i++; continue; }
+        if (c === '(' || c === ')' || c === '|') { toks.push({ t: c, at: i }); i++; continue; }
         let j = i + 1;
         while (j < body.length && !/[\s0-9a-fA-F?~[\]()|]/.test(body[j])) j++;
-        errors.push({ offset: base + i, length: j - i, message: `Invalid character${j - i > 1 ? 's' : ''} "${body.slice(i, j)}" in hex string` });
+        err(base + i, j - i, `Invalid character${j - i > 1 ? 's' : ''} "${body.slice(i, j)}" in hex string`);
         i = j;
     }
-    if (nibbles % 2 === 1) errors.push({ offset: base + body.length - 1, length: 1, message: 'Hex byte with a single digit' });
-    if (depth > 0) errors.push({ offset: 0, length: 1, message: 'Unbalanced "(": missing ")"' });
-    if (!items.length && !errors.length) errors.push({ offset: 0, length: raw.length, message: 'Empty hex string' });
-    if (items[0] === 'jump') errors.push({ offset: 0, length: 1, message: 'A hex string cannot start with a jump' });
-    if (items[items.length - 1] === 'jump') errors.push({ offset: raw.length - 1, length: 1, message: 'A hex string cannot end with a jump' });
-    return { errors, bytes, fixedBytes, leadingWildcard: items[0] === 'wild' };
+
+    // structure: seq := (byte | jump | "(" seq ("|" seq)* ")")+
+    let k = 0;
+    let groupDepth = 0;
+    const where = (tk) => (tk ? base + tk.at : raw.length - 1);
+    function seq(endAt) {
+        const items = [];
+        while (k < toks.length && !endAt.includes(toks[k].t)) {
+            const tk = toks[k];
+            if (tk.t === ')') { err(where(tk), 1, 'Unbalanced ")"'); k++; continue; }
+            if (tk.t === '|') { err(where(tk), 1, '"|" outside of an alternative ( a | b )'); k++; continue; }
+            if (tk.t === '(') {
+                k++;
+                groupDepth++;
+                for (;;) {
+                    const inner = seq(['|', ')']);
+                    if (!inner.length) err(where(toks[k] || tk), 1, 'Empty alternative in ( ... | ... )');
+                    if (k >= toks.length) { err(where(tk), 1, 'Unbalanced "(": missing ")"'); break; }
+                    const sep = toks[k++];
+                    if (sep.t === ')') break;
+                }
+                groupDepth--;
+                items.push({ t: 'group', at: tk.at });
+                continue;
+            }
+            if (tk.t === 'jump' && groupDepth > 0 && tk.unbounded) err(base + tk.at, tk.len, 'Unbounded jumps are not allowed inside ( ... )');
+            items.push(tk);
+            k++;
+        }
+        if (items.length && items[0].t === 'jump') err(base + items[0].at, items[0].len, groupDepth ? 'An alternative cannot start with a jump' : 'A hex string cannot start with a jump');
+        const last = items[items.length - 1];
+        if (items.length && last.t === 'jump') err(base + last.at, last.len, groupDepth ? 'An alternative cannot end with a jump' : 'A hex string cannot end with a jump');
+        return items;
+    }
+    const top = seq([]);
+    if (!toks.length && !errors.length) err(0, raw.length, 'Empty hex string');
+    void top;
+
+    const bytes = toks.filter(t => t.t === 'byte');
+    return {
+        errors,
+        bytes: bytes.length,
+        fixedBytes: bytes.filter(b => !b.wild).length,
+        leadingWildcard: !!(toks[0] && toks[0].t === 'byte' && toks[0].wild),
+    };
 }
 
 /** Text string escapes: returns [{offset, length, message}] relative to raw. */
@@ -208,4 +249,127 @@ export function sectionAt(rule, pos) {
         if (pos >= sec.bodyFrom && sec.from > bestFrom) { best = name; bestFrom = sec.from; }
     }
     return best;
+}
+
+/**
+ * Regular expression body (between the slashes), with libyara's rules: no (?...) groups, no
+ * backreferences, no empty group or leading "|", one quantifier per atom (a lazy "?" aside),
+ * {n,m} with n <= m, ordered class ranges, \x with two hex digits.
+ * Returns [{offset, length, message}] relative to the body.
+ */
+export function checkRegex(body) {
+    const errors = [];
+    const err = (offset, length, message) => { if (!errors.length) errors.push({ offset, length, message }); };
+    const stack = [];            // open groups: { at, empty }
+    let atom = false;            // something a quantifier can apply to
+    let quantified = false;      // last item already has a quantifier
+    let altEmpty = true;         // current alternative has nothing yet
+    const greedy = [null, null]; // first greedy / lazy quantifier seen
+    let justOpened = false;      // right after "("
+    let i = 0;
+    const n = body.length;
+    while (i < n && !errors.length) {
+        const c = body[i];
+        const afterOpen = justOpened;
+        justOpened = false;
+        if (c === '\\') {
+            const e = body[i + 1];
+            if (e === undefined) { err(i, 1, 'Regular expression ends with "\\"'); break; }
+            if (/[0-9]/.test(e)) err(i, 2, 'Backreferences are not allowed in YARA regular expressions');
+            if (e === 'x' && !/^[0-9a-fA-F]{2}$/.test(body.slice(i + 2, i + 4))) err(i, 2, 'Invalid escape: \\x needs two hex digits');
+            i += e === 'x' ? 4 : 2;
+            atom = e !== 'b' && e !== 'B';      // word boundaries cannot be repeated
+            quantified = false; altEmpty = false;
+            continue;
+        }
+        if (c === '[') {
+            const start = i;
+            i++;
+            if (body[i] === '^') i++;
+            if (body[i] === ']') i++;                 // "]" first is a literal
+            let prev = null;                          // last single char, for ranges
+            let closed = false;
+            while (i < n) {
+                const d = body[i];
+                if (d === ']') { closed = true; i++; break; }
+                let ch = d;
+                let len = 1;
+                if (d === '\\') {
+                    const e = body[i + 1];
+                    if (e === 'x') {
+                        if (!/^[0-9a-fA-F]{2}$/.test(body.slice(i + 2, i + 4))) { err(i, 2, 'Invalid escape: \\x needs two hex digits'); break; }
+                        ch = String.fromCharCode(parseInt(body.slice(i + 2, i + 4), 16)); len = 4;
+                    } else if (/[wWsSdD]/.test(e || '')) { ch = null; len = 2; }
+                    else { ch = { n: '\n', t: '\t', r: '\r', f: '\f', a: '\x07' }[e] ?? e; len = 2; }
+                }
+                if (prev !== null && body[i] === '-' && body[i + 1] !== ']' && i + 1 < n) {
+                    // range prev-next
+                    let j = i + 1;
+                    let hi = body[j];
+                    let hlen = 1;
+                    if (hi === '\\') {
+                        const e = body[j + 1];
+                        if (e === 'x') { hi = String.fromCharCode(parseInt(body.slice(j + 2, j + 4), 16)); hlen = 4; }
+                        else if (/[wWsSdD]/.test(e || '')) { hi = null; hlen = 2; }
+                        else { hi = { n: '\n', t: '\t', r: '\r', f: '\f', a: '\x07' }[e] ?? e; hlen = 2; }
+                    }
+                    if (hi !== null && hi !== undefined && hi < prev) err(start, j + hlen - start, 'Bad character range: the first character comes after the second');
+                    i = j + hlen;
+                    prev = null;
+                    continue;
+                }
+                prev = ch;
+                i += len;
+            }
+            if (errors.length) break;
+            if (!closed) { err(start, 1, 'Missing "]" to close the character class'); break; }
+            atom = true; quantified = false; altEmpty = false;
+            continue;
+        }
+        if (c === '(') {
+            if (body[i + 1] === '?') { err(i, 2, '"(?" groups (non-capturing, flags, lookaround) are not supported by YARA'); break; }
+            stack.push({ at: i, altEmpty });
+            altEmpty = true; atom = false; quantified = false; justOpened = true;
+            i++;
+            continue;
+        }
+        if (c === ')') {
+            const open = stack.pop();
+            if (!open) { err(i, 1, 'Unbalanced ")"'); break; }
+            if (altEmpty && body[i - 1] === '(') { err(open.at, i - open.at + 1, 'Empty group "()"'); break; }
+            altEmpty = false; atom = true; quantified = false;
+            i++;
+            continue;
+        }
+        if (c === '|') {
+            if (i === 0 || afterOpen) { err(i, 1, '"|" needs an expression on its left'); break; }
+            altEmpty = true; atom = false; quantified = false;
+            i++;
+            continue;
+        }
+        if (c === '*' || c === '+' || c === '?' || (c === '{' && /^\{(\d+|\d*,\d+|\d+,)\}/.test(body.slice(i)))) {
+            const m = c === '{' ? body.slice(i).match(/^\{(\d*)(,?)(\d*)\}/) : null;
+            const len = m ? m[0].length : 1;
+            if (c === '?' && quantified === true) {
+                // lazy marker after a quantifier
+                quantified = 'lazy';
+                i++;
+                continue;
+            }
+            if (!atom || quantified) { err(i, len, `Nothing to repeat before "${body.slice(i, i + len)}"`); break; }
+            if (m && m[1] && m[3] && Number(m[1]) > Number(m[3])) { err(i, len, `Bad repeat interval ${m[0]}: the minimum is above the maximum`); break; }
+            if (m && (Number(m[1] || 0) > 32767 || Number(m[3] || 0) > 32767)) { err(i, len, `Repeat interval ${m[0]} too large (max 32767)`); break; }
+            const lazy = body[i + len] === '?';
+            if (greedy[lazy ? 1 : 0] === null) greedy[lazy ? 1 : 0] = i;
+            if (greedy[0] !== null && greedy[1] !== null) { err(i, len + (lazy ? 1 : 0), 'Greedy and lazy (?) quantifiers cannot be mixed in one regular expression'); break; }
+            quantified = true;
+            i += len;
+            continue;
+        }
+        atom = c !== '^' && c !== '$';      // anchors cannot be repeated
+        quantified = false; altEmpty = false;
+        i++;
+    }
+    if (!errors.length && stack.length) err(stack[stack.length - 1].at, 1, 'Missing ")"');
+    return errors;
 }

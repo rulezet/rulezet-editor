@@ -12,6 +12,7 @@
     --rze-selection: rgba(13, 110, 253, 0.22);
     --rze-selection-match: rgba(13, 110, 253, 0.12);
     --rze-search-match: rgba(255, 193, 7, 0.35);
+    --rze-search-current: rgba(255, 152, 0, 0.75);
     --rze-bracket-match: rgba(13, 110, 253, 0.15);
     --rze-caret: #0d6efd;
     --rze-accent: #0d6efd;
@@ -58,6 +59,7 @@
     --rze-selection: rgba(38, 79, 120, 0.9);
     --rze-selection-match: rgba(173, 214, 255, 0.15);
     --rze-search-match: rgba(234, 92, 0, 0.33);
+    --rze-search-current: rgba(255, 140, 0, 0.7);
     --rze-bracket-match: rgba(0, 100, 0, 0.35);
     --rze-caret: #aeafad;
     --rze-accent: #0e639c;
@@ -333,6 +335,7 @@ button.rze-status-item:hover { background: var(--rze-active-line); color: var(--
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
     overflow: hidden;
 }
+.rze-palette-prompt { padding: 8px 12px 0; font-size: 12px; font-weight: 600; color: var(--rze-muted); }
 .rze-palette-search { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--rze-border); color: var(--rze-muted); }
 .rze-palette-input { flex: 1; border: 0; outline: none; background: transparent; color: var(--rze-fg); font: inherit; font-size: 14px; }
 .rze-palette-list { list-style: none; margin: 0; padding: 4px; max-height: 320px; overflow: auto; }

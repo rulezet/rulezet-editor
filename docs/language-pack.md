@@ -24,7 +24,7 @@ Start from `src/languages/_template/`. The YARA pack (`src/languages/yara/`) use
 | `sample` | string | conformance tests, demos |
 | `stream` | tokenizer | highlighting, comment toggle, auto-close brackets |
 | `indentUnit` | string | indentation (default four spaces) |
-| `snippets` | option[] | "New rule" button and top-level completion |
+| `snippets` | option[] | "New rule" button and top-level completion. `{{uuid}}` (new v4 UUID) and `{{date}}` (YYYY-MM-DD) are filled in on insert, also in fix `insert` texts |
 | `parse(text)` | model | called once per change; every function below receives this model |
 | `lint(model, options)` | diagnostic[] | underlines, gutter, problems panel, rules panel status |
 | `complete(ctx)` | result | suggestions |
@@ -36,6 +36,7 @@ Start from `src/languages/_template/`. The YARA pack (`src/languages/yara/`) use
 | `splitRules(model)` | rule[] | rules panel, `getRules()`, status bar count |
 | `folding(model)` | range[] | fold markers |
 | `dependencies(model)` | ref[] | rules used but not defined (host lookup) |
+| `actions(ctx)` | action[] | "Rule tools" (toolbar, Ctrl+Shift+R, palette): `{ id, label, input?: { label, placeholder, value? }, run(ctx, value) -> changes[] \| { error } }`. `ctx.author` is the editor's `author` option; `{{uuid}}` / `{{date}}` are filled in |
 
 ## Tokenizer (`stream`)
 

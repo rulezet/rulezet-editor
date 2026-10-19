@@ -5,6 +5,7 @@
  */
 import { lex, T } from './lexer.js';
 import { MODIFIERS, RESERVED } from './keywords.js';
+import { checkCondition } from './condition.js';
 
 const SECTION_NAMES = new Set(['meta', 'strings', 'condition']);
 
@@ -133,6 +134,10 @@ export function parse(text) {
                 if (current === 'condition') parseCondition();
                 else if (current === 'meta') parseMeta();
                 else parseStrings();
+                if (current !== 'condition' && (current === 'meta' ? !rule.meta.length : !rule.strings.length)) {
+                    const sec = rule.sections[current];
+                    ruleErr(sec.from, sec.to, `Empty "${current}:" section: add ${current === 'meta' ? 'a key = value' : 'a string'} or remove it`, { code: 'empty-section' });
+                }
                 continue;
             }
             ruleErr(t.from, t.to, current
@@ -144,13 +149,15 @@ export function parse(text) {
         if (!closed) {
             const last = tokens[i - 1];
             rule.to = last ? last.to : rule.to;
-            ruleErr(rule.nameFrom, rule.nameTo, `Rule "${rule.name}" is not closed: missing "}"`, { fix: { insertAt: rule.to, text: '\n}' } });
+            const at = Math.max(rule.nameFrom, rule.to - 1);
+            ruleErr(at, rule.to, `Rule "${rule.name}" is not closed: missing "}"`, { fix: { insertAt: rule.to, text: '\n}' } });
         }
         for (const sec of Object.values(rule.sections)) {
             sec.bodyTo = sec.bodyTo ?? rule.to;
         }
         if (!rule.sections.condition) {
-            ruleErr(rule.nameFrom, rule.nameTo, `Rule "${rule.name}" has no condition: section`, { code: 'no-condition' });
+            const at = rule.closeBrace ?? rule.nameFrom;
+            ruleErr(at, rule.closeBrace != null ? at + 1 : rule.nameTo, `Rule "${rule.name}" has no condition: section`, { code: 'no-condition' });
         }
         return rule;
 
@@ -184,9 +191,9 @@ export function parse(text) {
                 let vt = tok(2);
                 let neg = false;
                 if (isPunct(vt, '-') && tok(3) && tok(3).type === T.NUMBER) { neg = true; vt = tok(3); }
-                const ok = vt && (vt.type === T.TEXT || vt.type === T.NUMBER || isIdent(vt, 'true') || isIdent(vt, 'false'));
+                const ok = vt && (vt.type === T.TEXT || (vt.type === T.NUMBER && !vt.value.includes('.')) || isIdent(vt, 'true') || isIdent(vt, 'false'));
                 if (!ok) {
-                    ruleErr(key.from, (vt || key).to, `Meta "${key.value}" needs a value: "string", number, true or false`);
+                    ruleErr(key.from, (vt || key).to, `Meta "${key.value}" needs a value: "string", integer, true or false`);
                     i += 2;
                     skipToRecovery();
                     continue;
@@ -277,8 +284,11 @@ export function parse(text) {
                 const sec = rule.sections.condition;
                 ruleErr(sec.from, sec.to, 'Empty condition');
             }
-            if (depth > 0) ruleErr(from, rule.condition.to, 'Unbalanced parentheses: missing ")"');
-            if (depth < 0) ruleErr(from, rule.condition.to, 'Unbalanced parentheses: too many ")"');
+            void depth;      // parentheses are checked token by token below
+            if (condTokens.length) {
+                const imported = new Set(imports.map(m => m.name));
+                for (const e of checkCondition(condTokens, { imports: imported, end: rule.condition.to })) ruleErr(e.from, e.to, e.message, { code: e.code });
+            }
             sectionEnd();
         }
     }

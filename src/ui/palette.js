@@ -26,7 +26,31 @@ export class CommandPalette {
         this.input.focus();
     }
 
+    /** One-line input in the palette box. Resolves to the text, or null when cancelled. */
+    prompt({ label, placeholder = '', value = '' }) {
+        if (this._resolve) this._resolve(null);
+        this.previousFocus = document.activeElement;
+        return new Promise(resolve => {
+            this._resolve = resolve;
+            const done = (v) => { const r = this._resolve; this._resolve = null; this.close(); if (r) r(v); };
+            const input = h('input', {
+                class: 'rze-palette-input', type: 'text', placeholder, value, 'aria-label': label,
+                onkeydown: e => {
+                    if (e.key === 'Enter') { e.preventDefault(); done(input.value); }
+                    if (e.key === 'Escape') { e.preventDefault(); done(null); }
+                },
+            });
+            this.el.replaceChildren(h('div', { class: 'rze-palette-box' },
+                h('div', { class: 'rze-palette-prompt', text: label }),
+                h('div', { class: 'rze-palette-search' }, icon('edit'), input)));
+            this.el.hidden = false;
+            input.focus();
+            input.select();
+        });
+    }
+
     close() {
+        if (this._resolve) { const r = this._resolve; this._resolve = null; r(null); }
         this.el.hidden = true;
         if (this.previousFocus && this.previousFocus.focus) this.previousFocus.focus();
     }

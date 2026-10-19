@@ -23,7 +23,7 @@ import {
     autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap, snippetCompletion, startCompletion,
 } from '@codemirror/autocomplete';
 import { linter, lintGutter, lintKeymap, forceLinting, nextDiagnostic, previousDiagnostic } from '@codemirror/lint';
-import { searchKeymap, highlightSelectionMatches, openSearchPanel, gotoLine } from '@codemirror/search';
+import { search, searchKeymap, highlightSelectionMatches, openSearchPanel, closeSearchPanel, searchPanelOpen, gotoLine } from '@codemirror/search';
 
 import { registerLanguage, getLanguage, listLanguages, detectLanguage } from './registry.js';
 import { TOKEN_TAGS } from './tokens.js';
@@ -57,7 +57,8 @@ const DEFAULTS = {
     lint: {},                    // options passed to pack.lint
     format: {},                  // options passed to pack.format
     draftKey: null,              // autosave drafts under this key (host.saveDraft or localStorage)
-    lineWrapping: false,
+    author: null,                // default author for authoring actions (e.g. the logged-in user)
+    lineWrapping: null,          // null: last choice of this viewer (default off)
     placeholder: '',
 };
 
@@ -197,7 +198,7 @@ export class RulezetEditor {
         const sep = doc.length === 0 ? '' : doc.toString().endsWith('\n\n') ? '' : doc.toString().endsWith('\n') ? '\n' : '\n\n';
         this.view.dispatch({ changes: { from: doc.length, insert: sep }, selection: { anchor: doc.length + sep.length } });
         const pos = this.view.state.doc.length;
-        snippetCompletion(snippet.snippet, { label: snippet.label }).apply(this.view, snippet, pos, pos);
+        snippetCompletion(expandSnippetVars(snippet.snippet), { label: snippet.label }).apply(this.view, snippet, pos, pos);
         this.view.dispatch({ scrollIntoView: true });
         this.view.focus();
     }
@@ -212,6 +213,23 @@ export class RulezetEditor {
         this.view.dispatch({ effects: this.readOnlyConf.reconfigure(this._readOnlyExtensions()) });
         this._renderStatus();
     }
+
+    /** Search bar of the current document: every match is highlighted. Ctrl+F. */
+    toggleSearch(force) {
+        const open = searchPanelOpen(this.view.state);
+        if (force ?? !open) openSearchPanel(this.view);
+        else closeSearchPanel(this.view);
+    }
+
+    /** Long lines continue on the next visual row; line numbers stay the real ones. */
+    setLineWrapping(on) {
+        this.options.lineWrapping = !!on;
+        try { window.localStorage.setItem(WRAP_KEY, on ? '1' : '0'); } catch { /* storage blocked */ }
+        this.view.dispatch({ effects: this.wrapConf.reconfigure(on ? EditorView.lineWrapping : []) });
+        this._renderToolbar();
+    }
+
+    toggleLineWrapping() { this.setLineWrapping(!this.options.lineWrapping); }
 
     toggleOutline(force) { this._setOutlineOpen(force ?? !this._outlineOpen); }
     toggleProblems(force) { this._setProblemsOpen(force ?? !this._problemsOpen); }
@@ -238,10 +256,56 @@ export class RulezetEditor {
         this.view.dispatch({ effects: renameEffect.of({ pos, name: refs.name, kind: refs.kind }) });
     }
 
-    openPalette() { this.palette.open(this._commands()); }
+    openPalette() { this.palette.open([...this._commands(), ...this._actionCommands()]); }
+
+    /** Palette with only the pack's authoring actions (add date, tag, id...). */
+    openRuleTools() {
+        const cmds = this._actionCommands();
+        if (!cmds.length) { this._toast(this.t('noRuleHere')); return; }
+        this.palette.open(cmds);
+    }
+
+    /** Runs a pack action by id; value skips the prompt when the action asks for one. */
+    async runAction(id, value) {
+        const pos = this.view.state.selection.main.head;
+        const ctx = this._ctx(this.view.state, pos, { author: this.options.author });
+        const action = this._packActions(ctx).find(a => a.id === id);
+        if (!action || this.options.readOnly) return false;
+        if (action.input && value === undefined) {
+            const def = typeof action.input.value === 'function' ? action.input.value(ctx) : action.input.value;
+            value = await this.palette.prompt({ label: action.input.label, placeholder: action.input.placeholder, value: def || '' });
+            if (value == null) { this.view.focus(); return false; }
+        }
+        // the document may have changed while the prompt was open
+        const fresh = this._ctx(this.view.state, Math.min(pos, this.view.state.doc.length), { author: this.options.author });
+        let res;
+        try { res = action.run(fresh, value); } catch (e) { res = { error: e.message }; }
+        if (!res || res.error || !res.length) {
+            this._toast(res && res.error ? res.error : this.t('nothingToDo'));
+            this.view.focus();
+            return false;
+        }
+        this.view.dispatch({
+            changes: res.map(c => ({ from: c.from, to: c.to, insert: expandSnippetVars(c.insert || '') })),
+            userEvent: 'input.action', scrollIntoView: true,
+        });
+        this.view.focus();
+        this.events.emit('action', { id });
+        return true;
+    }
+
+    _packActions(ctx) {
+        if (!this.pack.actions) return [];
+        try { return this.pack.actions(ctx) || []; } catch { return []; }
+    }
+
+    _actionCommands() {
+        const ctx = this._ctx(this.view.state, this.view.state.selection.main.head, { author: this.options.author });
+        return this._packActions(ctx).map(a => ({ id: a.id, label: `${cap(this.t('rule'))}: ${a.label}`, run: () => this.runAction(a.id) }));
+    }
 
     execCommand(id) {
-        const cmd = this._commands().find(c => c.id === id);
+        const cmd = [...this._commands(), ...this._actionCommands()].find(c => c.id === id);
         if (cmd) cmd.run();
         return !!cmd;
     }
@@ -321,6 +385,8 @@ export class RulezetEditor {
             crosshairCursor(),
             highlightActiveLine(),
             highlightSelectionMatches(),
+            search({ top: true }),
+            EditorState.phrases.of(SEARCH_PHRASES[this.options.locale] || {}),
             lintGutter(),
             linter(view => this._lintSource(view), {
                 delay: 300,
@@ -339,6 +405,8 @@ export class RulezetEditor {
                 { key: 'Mod-Shift-m', run: () => { this.toggleProblems(); return true; }, preventDefault: true },
                 { key: 'Mod-Shift-o', run: () => { this.toggleOutline(true); this._focusOutlineFilter(); return true; }, preventDefault: true },
                 { key: 'Mod-Enter', run: () => { this.validate(); return true; } },
+                { key: 'Mod-Shift-r', run: () => { this.openRuleTools(); return true; }, preventDefault: true },
+                { key: 'Alt-z', run: () => { this.toggleLineWrapping(); return true; }, preventDefault: true },
                 { key: 'Escape', run: () => { if (this.root.classList.contains('rze-fullscreen')) { this.toggleFullscreen(false); return true; } return false; } },
                 indentWithTab,
                 ...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap,
@@ -346,7 +414,7 @@ export class RulezetEditor {
             ]),
             this.languageConf.of(this._languageExtensions()),
             this.readOnlyConf.of(this._readOnlyExtensions()),
-            this.wrapConf.of(this.options.lineWrapping ? EditorView.lineWrapping : []),
+            this.wrapConf.of(this._initialWrap() ? EditorView.lineWrapping : []),
             themeExtensions,
             EditorView.domEventHandlers({
                 mousedown(e, view) {
@@ -527,7 +595,7 @@ export class RulezetEditor {
             if (!again) return;
             changes = again.fixes.find(f => f.label === fix.label).changes;
         }
-        view.dispatch({ changes: changes.map(c => ({ from: c.from, to: c.to, insert: c.insert })), userEvent: 'input.fix', scrollIntoView: true });
+        view.dispatch({ changes: changes.map(c => ({ from: c.from, to: c.to, insert: expandSnippetVars(c.insert || '') })), userEvent: 'input.fix', scrollIntoView: true });
         view.focus();
     }
 
@@ -657,7 +725,11 @@ export class RulezetEditor {
 
     _toCompletion(o) {
         const base = { label: o.label, detail: o.detail, info: o.info, type: COMPLETION_TYPES[o.type] || o.type, boost: o.boost };
-        if (o.snippet) return snippetCompletion(o.snippet, base);
+        if (o.snippet) {
+            // expanded when applied, so every inserted rule gets its own uuid
+            const make = () => snippetCompletion(expandSnippetVars(o.snippet), base);
+            return { ...base, apply: (view, completion, from, to) => make().apply(view, completion, from, to) };
+        }
         if (o.extraChanges) {
             return {
                 ...base,
@@ -729,6 +801,15 @@ export class RulezetEditor {
         }
     }
 
+    _initialWrap() {
+        if (this.options.lineWrapping == null) {
+            let saved = null;
+            try { saved = window.localStorage.getItem(WRAP_KEY); } catch { /* storage blocked */ }
+            this.options.lineWrapping = saved === '1';
+        }
+        return this.options.lineWrapping;
+    }
+
     _renderToolbar() {
         if (!this.options.toolbar) return;
         const t = this.t;
@@ -740,12 +821,15 @@ export class RulezetEditor {
             h('span', { class: 'rze-toolbar-lang', text: this.pack.name }),
             h('span', { class: 'rze-toolbar-sep' }),
             this.pack.snippets ? btn('plus', 'New rule', () => this.newRule()) : '',
+            this.pack.actions ? btn('tools', t('ruleTools'), () => this.openRuleTools(), false, `${t('ruleTools')} (Ctrl+Shift+R)`) : '',
             this.pack.format ? btn('format', t('format'), () => this.format(), false, `${t('format')} (Shift+Alt+F)`) : '',
             this.pack.splitRules ? btn('outline', t('outline'), () => this.toggleOutline(), this._outlineOpen, `${t('outline')} (Ctrl+Shift+O)`) : '',
             btn('problems', t('problems'), () => this.toggleProblems(), this._problemsOpen, `${t('problems')} (Ctrl+Shift+M)`),
             h('span', { class: 'rze-toolbar-fill' }),
+            btn('search', t('search'), () => this.toggleSearch(), false, `${t('search')} (Ctrl+F)`),
             btn('palette', t('palette'), () => this.openPalette(), false, `${t('palette')} (Ctrl+Shift+P / F1)`),
             btn(dark ? 'sun' : 'moon', t('theme'), () => this.setTheme(dark ? 'light' : 'dark')),
+            btn('wrap', t('wrap'), () => this.toggleLineWrapping(), !!this.options.lineWrapping, `${t('wrap')} (Alt+Z)`),
             btn(fs ? 'collapse' : 'expand', t('fullscreen'), () => this.toggleFullscreen()),
         );
     }
@@ -873,7 +957,7 @@ export class RulezetEditor {
             { id: 'comment', label: 'Toggle comment', key: 'Ctrl+/', run: () => toggleComment(v) },
             { id: 'foldAll', label: 'Fold all', key: 'Ctrl+Alt+[', run: () => foldAll(v) },
             { id: 'unfoldAll', label: 'Unfold all', key: 'Ctrl+Alt+]', run: () => unfoldAll(v) },
-            { id: 'wrap', label: 'Toggle line wrapping', run: () => { this.options.lineWrapping = !this.options.lineWrapping; v.dispatch({ effects: this.wrapConf.reconfigure(this.options.lineWrapping ? EditorView.lineWrapping : []) }); } },
+            { id: 'wrap', label: 'Toggle line wrapping', key: 'Alt+Z', run: () => this.toggleLineWrapping() },
             { id: 'theme', label: 'Toggle light / dark theme', run: () => this.setTheme(this.root.classList.contains('rze-dark') ? 'light' : 'dark') },
             { id: 'fullscreen', label: 'Toggle full screen', key: 'Esc to leave', run: () => this.toggleFullscreen() },
             { id: 'undo', label: 'Undo', key: 'Ctrl+Z', run: () => undo(v) },
@@ -1025,4 +1109,38 @@ function renamePanel(editor) {
         } : null),
     });
     return field;
+}
+
+const WRAP_KEY = 'rulezet-editor:wrap';
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// CodeMirror's search bar texts (English is built in)
+const SEARCH_PHRASES = {
+    fr: {
+        'Find': 'Rechercher', 'Replace': 'Remplacer', 'next': 'suivant', 'previous': 'précédent', 'all': 'tout',
+        'match case': 'respecter la casse', 'regexp': 'regex', 'by word': 'mot entier', 'replace': 'remplacer',
+        'replace all': 'tout remplacer', 'close': 'fermer', 'current match': 'occurrence courante',
+        'replaced $ matches': '$ occurrences remplacées', 'replaced match on line $': 'occurrence remplacée ligne $',
+        'on line': 'ligne', 'Go to line': 'Aller à la ligne', 'go': 'aller',
+    },
+};
+
+/** Fresh RFC 4122 v4 uuid, like Rulezet's uuid.uuid4(). */
+export function uuid4() {
+    const c = globalThis.crypto;
+    if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+    const b = new Uint8Array(16);
+    if (c && c.getRandomValues) c.getRandomValues(b);
+    else for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+/** Pack snippets may use {{uuid}} and {{date}}: filled in when the snippet is inserted. */
+export function expandSnippetVars(snippet) {
+    return snippet
+        .replace(/\{\{uuid\}\}/g, () => uuid4())
+        .replace(/\{\{date\}\}/g, () => new Date().toISOString().slice(0, 10));
 }

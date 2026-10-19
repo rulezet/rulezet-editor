@@ -7,6 +7,7 @@ import { lint, DEFAULT_LINT_OPTIONS } from './lint.js';
 import { complete, TOP_SNIPPETS } from './completion.js';
 import { hover, definition, references, rename } from './navigation.js';
 import { format, DEFAULT_FORMAT_OPTIONS } from './format.js';
+import { actions } from './actions.js';
 import { stream } from './highlight.js';
 import { conditionRefs } from './analysis.js';
 import { MODULES } from './modules.js';
@@ -48,6 +49,7 @@ export default {
     comments: { line: '//', block: ['/*', '*/'] },
     indentUnit: '    ',
     snippets: TOP_SNIPPETS,
+    actions,
     modules: MODULES,
 
     parse,

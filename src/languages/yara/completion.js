@@ -14,12 +14,12 @@ import { sectionAt } from './analysis.js';
 const BUILTIN_FUNCS = Object.keys(CONDITION_KEYWORDS).filter(k => /int\d/.test(k));
 
 export const TOP_SNIPPETS = [
-    { label: 'rule', detail: 'new rule', type: 'snippet', boost: 10, snippet: 'rule ${name}\n{\n    meta:\n        author = "${author}"\n        description = "${description}"\n        date = "${date}"\n    strings:\n        $s1 = "${text}"\n    condition:\n        ${condition}\n}' },
+    { label: 'rule', detail: 'new rule', type: 'snippet', boost: 10, snippet: 'rule ${name}\n{\n    meta:\n        id = "{{uuid}}"\n        author = "${author}"\n        description = "${description}"\n        date = "{{date}}"\n    strings:\n        $s1 = "${text}"\n    condition:\n        ${condition}\n}' },
     { label: 'rule (minimal)', detail: 'rule without meta', type: 'snippet', snippet: 'rule ${name}\n{\n    strings:\n        $s1 = "${text}"\n    condition:\n        $s1\n}' },
-    { label: 'rule (PE file)', detail: 'Windows executable', type: 'snippet', snippet: 'rule ${name}\n{\n    meta:\n        author = "${author}"\n        description = "${description}"\n    strings:\n        $s1 = "${text}" ascii wide\n    condition:\n        uint16(0) == 0x5A4D and filesize < ${size}MB and $s1\n}' },
-    { label: 'rule (ELF file)', detail: 'Linux executable', type: 'snippet', snippet: 'rule ${name}\n{\n    strings:\n        $s1 = "${text}"\n    condition:\n        uint32(0) == 0x464C457F and $s1\n}' },
-    { label: 'private rule', type: 'snippet', snippet: 'private rule ${name}\n{\n    condition:\n        ${condition}\n}' },
-    { label: 'global rule', type: 'snippet', snippet: 'global rule ${name}\n{\n    condition:\n        ${filesize < 10MB}\n}' },
+    { label: 'rule (PE file)', detail: 'Windows executable', type: 'snippet', snippet: 'rule ${name}\n{\n    meta:\n        id = "{{uuid}}"\n        author = "${author}"\n        description = "${description}"\n        date = "{{date}}"\n    strings:\n        $s1 = "${text}" ascii wide\n    condition:\n        uint16(0) == 0x5A4D and filesize < ${size}MB and $s1\n}' },
+    { label: 'rule (ELF file)', detail: 'Linux executable', type: 'snippet', snippet: 'rule ${name}\n{\n    meta:\n        id = "{{uuid}}"\n        author = "${author}"\n        description = "${description}"\n        date = "{{date}}"\n    strings:\n        $s1 = "${text}"\n    condition:\n        uint32(0) == 0x464C457F and $s1\n}' },
+    { label: 'private rule', type: 'snippet', snippet: 'private rule ${name}\n{\n    meta:\n        id = "{{uuid}}"\n        author = "${author}"\n        description = "${description}"\n        date = "{{date}}"\n    condition:\n        ${condition}\n}' },
+    { label: 'global rule', type: 'snippet', snippet: 'global rule ${name}\n{\n    meta:\n        id = "{{uuid}}"\n        author = "${author}"\n        description = "${description}"\n        date = "{{date}}"\n    condition:\n        ${filesize < 10MB}\n}' },
     { label: 'import', type: 'keyword', snippet: 'import "${module}"' },
     { label: 'include', type: 'keyword', snippet: 'include "${file.yar}"' },
 ];
