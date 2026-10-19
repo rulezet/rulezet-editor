@@ -39,3 +39,12 @@ Not yet (Rulezet page).
 ## Tests
 
 `tests_new/editor/test_editor_bundle.py`.
+
+## Test scenarios
+
+Admins (or a development instance) get a "Test scenarios" menu in `/editor`:
+`GET /editor-api/yara/scenarios` (`editor_core.scenarios`) builds cases from the database (new
+rules, syntax error, blocked, unknown dependency, dependency on Rulezet, unchanged existing rule,
+your rule changed = update, someone else's = proposal, locked, unlock, bundle with folders,
+everything at once). Choosing one replaces the workspace and shows what should happen. An admin
+may edit every rule, so the "proposal" case shows an update for admins (the scenario says so).
