@@ -106,7 +106,7 @@ npm test         # unit tests + conformance suite
 npm run build    # dist/
 ```
 
-Adding a format: [CONTRIBUTING.md](CONTRIBUTING.md).
+Adding a format: [CONTRIBUTING.md](CONTRIBUTING.md). Repository guide: [AGENTS.md](AGENTS.md).
 
 ## Roadmap
 
