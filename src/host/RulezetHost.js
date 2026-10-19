@@ -8,43 +8,12 @@
  *   POST /api/rule/public/validate     { format, content }
  *   GET  /api/rule/public/searchPage   ?search=&rule_type=&per_page=
  */
-import { LocalDraftHost } from './HostAdapter.js';
+import { HttpHost } from './HostAdapter.js';
 
-export class RulezetHost extends LocalDraftHost {
+export class RulezetHost extends HttpHost {
     constructor(options = {}) {
-        super(options.draftPrefix);
-        this.name = 'Rulezet';
-        this.baseUrl = (options.baseUrl ?? '').replace(/\/+$/, '');
-        this.apiKey = options.apiKey || null;
-        this.csrfToken = options.csrfToken || null;
-        this.fetch = options.fetch || ((...args) => window.fetch(...args));
-        this.timeout = options.timeout ?? 8000;
-        this.formatMap = options.formatMap || {};      // editor language id -> Rulezet format name
-    }
-
-    _headers(json) {
-        const h = { Accept: 'application/json' };
-        if (json) h['Content-Type'] = 'application/json';
-        if (this.apiKey) h['X-API-KEY'] = this.apiKey;
-        if (this.csrfToken) h['X-CSRFToken'] = this.csrfToken;
-        return h;
-    }
-
-    async _request(path, init = {}) {
-        const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        const timer = ctrl ? setTimeout(() => ctrl.abort(), this.timeout) : null;
-        try {
-            const res = await this.fetch(this.baseUrl + path, { ...init, signal: ctrl ? ctrl.signal : undefined });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok && res.status !== 400) throw new Error(data.error || data.message || `HTTP ${res.status}`);
-            return data;
-        } finally {
-            if (timer) clearTimeout(timer);
-        }
-    }
-
-    format(language) {
-        return this.formatMap[language] || language;
+        super(options);
+        this.name = options.name || 'Rulezet';
     }
 
     ruleUrl(uuid) {

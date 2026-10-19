@@ -46,3 +46,45 @@ export class LocalDraftHost extends HostAdapter {
         }
     }
 }
+
+/** Base for adapters that talk JSON over HTTP. A 400 answer still carries a body to read. */
+export class HttpHost extends LocalDraftHost {
+    constructor(options = {}) {
+        super(options.draftPrefix);
+        this.baseUrl = (options.baseUrl ?? '').replace(/\/+$/, '');
+        this.apiKey = options.apiKey || null;
+        this.csrfToken = options.csrfToken || null;
+        this.fetch = options.fetch || ((...args) => window.fetch(...args));
+        this.timeout = options.timeout ?? 8000;
+        this.formatMap = options.formatMap || {};      // editor language id -> backend format name
+    }
+
+    format(language) {
+        return this.formatMap[language] || language;
+    }
+
+    _headers(json) {
+        const h = { Accept: 'application/json' };
+        if (json) h['Content-Type'] = 'application/json';
+        if (this.apiKey) h['X-API-KEY'] = this.apiKey;
+        if (this.csrfToken) h['X-CSRFToken'] = this.csrfToken;
+        return h;
+    }
+
+    async _request(path, init = {}, { allow = [400] } = {}) {
+        const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = ctrl ? setTimeout(() => ctrl.abort(), this.timeout) : null;
+        try {
+            const res = await this.fetch(this.baseUrl + path, { ...init, signal: ctrl ? ctrl.signal : undefined });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok && !allow.includes(res.status)) {
+                const err = new Error(data.error || data.message || `HTTP ${res.status}`);
+                err.status = res.status;
+                throw err;
+            }
+            return data;
+        } finally {
+            if (timer) clearTimeout(timer);
+        }
+    }
+}

@@ -32,6 +32,25 @@ class MyHost extends HostAdapter {
 
 `language` is the pack's `validateAs` (or its `id`).
 
+## EditorServerHost (recommended)
+
+Talks to the editor's server (`server/rulezet_editor`), mounted inside Rulezet or run standalone
+(see [integration.md](integration.md)). Same browser code in both modes.
+
+```js
+new EditorServerHost({ baseUrl: '/editor-api', csrfToken, name: 'Rulezet', formatMap: {} });
+```
+
+| Method | Endpoint |
+|---|---|
+| `validate` | `POST /validate` `{ format, content }` -> `{ valid, items }` |
+| `searchRules` | `GET /rules?format=&q=&limit=` -> `{ results }` |
+| `getRule` | `GET /rules/<name>?format=` -> rule or 404 |
+
+Server side, a `Backend` answers each call (`None` = not available, `BackendError` = failed):
+`FunctionBackend` (host functions, Rulezet), `LocalBackend` (local compilers),
+`RulezetApiBackend` (public API), `ChainBackend` (first answer wins).
+
 ## RulezetHost
 
 `RulezetHost` talks to any Rulezet instance through the public API (no account needed):

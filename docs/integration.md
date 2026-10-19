@@ -40,14 +40,74 @@ app.component('rule-editor', createVueComponent(Vue));
 
 Props: `modelValue`, `language`, `theme`, `readOnly`, `height`, `host`, `options` (any other option).
 
-## Inside Rulezet
+## Inside Rulezet (main mode)
 
-1. Copy `dist/` to `app/static/vendor/rulezet-editor/<version>/` and add the module to the import
-   map in `base.html`.
-2. `SmartEditor` keeps its props and uses `RulezetEditor` for code formats, so the create / edit
-   pages and the edit proposals switch without other changes.
-3. `new RulezetHost({ baseUrl: '', csrfToken })`: same origin, no CORS.
-4. The theme follows Rulezet automatically (`data-bs-theme` / `body.dark-mode`) with `theme: 'auto'`.
+The editor is a git submodule of `rulezet-core`. Its server part is a Flask blueprint that
+Rulezet mounts with its **own functions**: validation and rule lookup run in the Rulezet
+process, on its database, with no HTTP call (and never to rulezet.org).
+
+```bash
+git submodule add https://github.com/rulezet/rulezet-editor.git app/modules/rulezet-editor
+pip install -e app/modules/rulezet-editor
+```
+
+```python
+# app/__init__.py (create_app)
+from rulezet_editor import FunctionBackend, create_blueprint
+from app.core.db_class.rule import Rule
+from app.features.rule import rule_core
+
+def _search_rules(fmt, query, limit):
+    q = rule_core._active().filter(Rule.title.ilike(f'%{query}%'))
+    if fmt:
+        q = q.filter(Rule.format == fmt)
+    return [{'name': r.title, 'uuid': r.uuid, 'description': r.description, 'author': r.author,
+             'content': r.to_string, 'url': f'/rule/detail_rule/{r.uuid}'} for r in q.limit(limit)]
+
+editor_backend = FunctionBackend(
+    name='Rulezet',
+    validate=lambda fmt, content: rule_core.validate_rule_syntax(fmt, content, resolve_dependencies=True),
+    search_rules=_search_rules,
+)
+app.register_blueprint(create_blueprint(editor_backend), url_prefix='/editor-api')
+```
+
+`validate_rule_syntax` returns `{ok, errors, warnings}` or `None` for an unknown format: the
+blueprint accepts that as is. With `resolve_dependencies=True`, a YARA rule that uses rules stored
+in Rulezet is compiled together with them.
+
+In the page:
+
+```js
+import { createVueComponent, EditorServerHost } from '/editor-api/assets/rulezet-editor.js';
+const host = new EditorServerHost({ baseUrl: '/editor-api', csrfToken });
+```
+
+The blueprint serves `dist/` under `/editor-api/assets/`, so no copy is needed after a submodule
+update. To keep Rulezet's versioned static URLs instead, copy `dist/` to
+`app/static/vendor/rulezet-editor/<version>/` and add it to the import map in `base.html`.
+
+Feature by feature (what Rulezet provides for each one): [docs/rulezet/](rulezet/README.md).
+
+The theme follows Rulezet automatically (`data-bs-theme` / `body.dark-mode`) with `theme: 'auto'`.
+
+## Standalone (without a local Rulezet)
+
+```bash
+pip install "rulezet-editor[yara]"     # or: pip install -e . from a clone
+rulezet-editor serve                   # http://127.0.0.1:5174/
+rulezet-editor serve --rulezet-url https://my-rulezet.example --api-key ...
+rulezet-editor serve --offline         # local compilers only
+```
+
+Formats with a local compiler (YARA with yara-python) are validated on the machine; the other
+formats and the rule lookup go to the public Rulezet API. In Python: `create_app(rulezet_url=...)`,
+or build your own chain: `ChainBackend(LocalBackend(), RulezetApiBackend(url))`.
+
+In the page: `new EditorServerHost({ baseUrl: '/editor-api', name: 'rulezet.org' })`.
+
+Without any server at all, `RulezetHost` calls the public Rulezet API straight from the browser
+(needs CORS on the Rulezet side).
 
 ## Options
 

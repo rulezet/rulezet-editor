@@ -1,8 +1,8 @@
-import { RulezetEditor, RulezetHost, listLanguages } from '/dist/rulezet-editor.js';
+import { RulezetEditor, RulezetHost, EditorServerHost, listLanguages } from '/dist/rulezet-editor.js';
 import { SAMPLES } from '/playground/samples.js';
 
 const $ = (id) => document.getElementById(id);
-const settings = { sample: 'Several rules', language: 'yara', host: 'rulezet', theme: 'auto', locale: 'en', readOnly: false };
+const settings = { sample: 'Several rules', language: 'yara', host: 'server', theme: 'auto', locale: 'en', readOnly: false };
 let editor = null;
 
 for (const name of Object.keys(SAMPLES)) $('pg-sample').append(new Option(name, name));
@@ -27,7 +27,7 @@ function create(value) {
         theme: settings.theme,
         locale: settings.locale,
         readOnly: settings.readOnly,
-        host: settings.host === 'rulezet' ? new RulezetHost({ baseUrl: '' }) : null,
+        host: { server: () => new EditorServerHost({ baseUrl: '/editor-api' }), rulezet: () => new RulezetHost({ baseUrl: '' }) }[settings.host]?.() || null,
         draftKey: 'playground',
     });
     editor.on('ready', () => log('ready', editor.getLanguage()));

@@ -6,6 +6,7 @@
  *   npm run dev                                   # Rulezet at http://127.0.0.1:7009
  *   RULEZET_URL=https://rulezet.org npm run dev
  *   PORT=5173 npm run dev
+ * /editor-api/ goes to the editor server (`rulezet-editor serve`, default port 5174).
  */
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
@@ -14,16 +15,17 @@ import { spawn } from 'node:child_process';
 
 const PORT = Number(process.env.PORT || 5173);
 const RULEZET_URL = (process.env.RULEZET_URL || 'http://127.0.0.1:7009').replace(/\/+$/, '');
+const EDITOR_SERVER = (process.env.EDITOR_SERVER || 'http://127.0.0.1:5174').replace(/\/+$/, '');
 const ROOT = process.cwd();
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.map': 'application/json', '.json': 'application/json', '.svg': 'image/svg+xml', '.yar': 'text/plain' };
 
 spawn(process.execPath, ['scripts/build.mjs', '--watch'], { stdio: 'inherit' });
 
-async function proxy(req, res) {
+async function proxy(req, res, target = RULEZET_URL) {
     const chunks = [];
     for await (const c of req) chunks.push(c);
     try {
-        const upstream = await fetch(RULEZET_URL + req.url, {
+        const upstream = await fetch(target + req.url, {
             method: req.method,
             headers: { 'content-type': req.headers['content-type'] || 'application/json', accept: 'application/json' },
             body: ['GET', 'HEAD'].includes(req.method) ? undefined : Buffer.concat(chunks),
@@ -32,12 +34,13 @@ async function proxy(req, res) {
         res.end(Buffer.from(await upstream.arrayBuffer()));
     } catch (e) {
         res.writeHead(502, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ error: `Rulezet not reachable at ${RULEZET_URL}: ${e.message}` }));
+        res.end(JSON.stringify({ error: `not reachable at ${target}: ${e.message}` }));
     }
 }
 
 http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
+    if (url.pathname.startsWith('/editor-api/')) return proxy(req, res, EDITOR_SERVER);
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/rule/')) return proxy(req, res);
     let path = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '');
     if (path === '/' || path === '\\') path = '/playground/index.html';
@@ -54,5 +57,6 @@ http.createServer(async (req, res) => {
     }
 }).listen(PORT, '127.0.0.1', () => {
     console.log(`\n  Playground:  http://127.0.0.1:${PORT}/`);
-    console.log(`  Rulezet API: ${RULEZET_URL} (proxied on /api and /rule)\n`);
+    console.log(`  Rulezet API: ${RULEZET_URL} (proxied on /api and /rule)`);
+    console.log(`  Editor API:  ${EDITOR_SERVER} (proxied on /editor-api)\n`);
 });
