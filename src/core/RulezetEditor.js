@@ -91,6 +91,8 @@ export class RulezetEditor {
         this._server = { text: null, items: [], error: null };
         this._annotations = { text: null, diagnostics: [], rules: {} };
         this._locks = new Map();      // rule name -> { label, canUnlock, url }
+        this._docs = new Map();       // document id -> saved state of a document not shown (openDocument)
+        this._activeDoc = 'main';
         this._serverState = this._serverEnabled() ? 'idle' : 'off';
         this._externals = new Map();
         this._timers = {};
@@ -227,7 +229,13 @@ export class RulezetEditor {
      *                -> shown on each rule in the rules panel (opened)
      * Both are dropped as soon as the text changes: they describe that exact text.
      */
-    setAnnotations({ diagnostics = [], rules = {}, source = '' } = {}) {
+    setAnnotations({ diagnostics = [], rules = {}, source = '' } = {}, { document = this._activeDoc } = {}) {
+        if (document !== this._activeDoc) {
+            // a document not shown: kept with it, shown when it is opened (if its text is the same)
+            const saved = this._docs.get(document);
+            if (saved) saved.annotations = { text: saved.state.doc.toString(), diagnostics, rules, source };
+            return;
+        }
         this._annotations = { text: this.getValue(), diagnostics, rules, source };
         if (Object.keys(rules).length) this._setOutlineOpen(true);
         this._relint();
@@ -237,6 +245,80 @@ export class RulezetEditor {
         if (!this._annotations.text) return;
         this._annotations = { text: null, diagnostics: [], rules: {} };
         this._relint();
+    }
+
+    // ── several documents (one per file of a workspace) ──
+
+    /**
+     * Shows another document in the editor. Each document keeps its own text, undo history,
+     * locks and host results; `text` is only used the first time the id is opened.
+     */
+    openDocument(id, { text = '' } = {}) {
+        if (id === this._activeDoc) return;
+        this._docs.set(this._activeDoc, {
+            state: this.view.state, locks: this._locks, annotations: this._annotations, server: this._server,
+        });
+        const saved = this._docs.get(id);
+        this._docs.delete(id);
+        this._activeDoc = id;
+        this._locks = saved ? saved.locks : new Map();
+        this._annotations = saved ? saved.annotations : { text: null, diagnostics: [], rules: {} };
+        this._server = saved ? saved.server : { text: null, items: [], error: null };
+        this.view.setState(saved ? saved.state : EditorState.create({ doc: text, extensions: this._extensions }));
+        // settings changed since that state was made (theme, wrap, read-only, language) apply to it too
+        this.view.dispatch({ effects: [
+            this.languageConf.reconfigure(this._languageExtensions()),
+            this.readOnlyConf.reconfigure(this._readOnlyExtensions()),
+            this.wrapConf.reconfigure(this.options.lineWrapping ? EditorView.lineWrapping : []),
+            locksChanged.of(null),
+        ] });
+        this._applyTheme();
+        this._relint();
+        this._renderToolbar();
+        this.events.emit('document', id);
+    }
+
+    /** Forgets a document that is not shown (the shown one cannot be closed). */
+    closeDocument(id) {
+        if (id === this._activeDoc) return false;
+        return this._docs.delete(id);
+    }
+
+    activeDocument() { return this._activeDoc; }
+
+    documentIds() { return [this._activeDoc, ...this._docs.keys()]; }
+
+    getDocumentText(id = this._activeDoc) {
+        if (id === this._activeDoc) return this.getValue();
+        const saved = this._docs.get(id);
+        return saved ? saved.state.doc.toString() : null;
+    }
+
+    /** Rules of any open document, as getRules() gives them for the shown one. */
+    getRulesOf(id = this._activeDoc) {
+        if (id === this._activeDoc) return this.getRules();
+        const text = this.getDocumentText(id);
+        if (text == null || !this.pack.splitRules) return [];
+        try {
+            const model = this.pack.parse ? this.pack.parse(text) : { text };
+            return this.pack.splitRules(model).map(r => ({ ...r, line: text.slice(0, r.from).split('\n').length }));
+        } catch {
+            return [];
+        }
+    }
+
+    /** Model (pack.parse) of any open document. */
+    getModelOf(id = this._activeDoc) {
+        if (id === this._activeDoc) return this.getModel();
+        const text = this.getDocumentText(id);
+        try { return this.pack.parse ? this.pack.parse(text || '') : { text }; } catch { return { text }; }
+    }
+
+    /** Locks of a document that is not shown (or the shown one). */
+    lockRuleIn(id, name, info = {}) {
+        if (id === this._activeDoc) return this.lockRule(name, info);
+        const saved = this._docs.get(id);
+        if (saved) saved.locks.set(name, { label: info.label || (this.host ? this.host.name : ''), canUnlock: !!info.canUnlock, url: info.url || null });
     }
 
     /**
@@ -483,6 +565,7 @@ export class RulezetEditor {
             }),
             EditorView.updateListener.of(update => this._onUpdate(update)),
         ];
+        this._extensions = extensions;
         this.view = new EditorView({ state: EditorState.create({ doc, extensions }), parent: this.editorEl });
     }
 

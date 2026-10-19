@@ -138,9 +138,9 @@ Methods: `getValue()`, `setValue(text)`, `getLanguage()`, `setLanguage(id)`, `ge
 `getDiagnostics()`, `getModel()`, `format()`, `validate()`, `goTo(pos | {line})`, `insertText(text)`,
 `newRule()`, `goToDefinition()`, `startRename()`, `openPalette()`, `execCommand(id)`,
 `toggleOutline()`, `toggleProblems()`, `toggleFullscreen()`, `setTheme()`, `setReadOnly()`,
-`setAnnotations({ diagnostics, rules, source })` (host results for the current text: underlines, problems panel, a badge and notes per rule in the rules panel; dropped when the text changes), `clearAnnotations()`, `notify(message)`, `refreshToolbar()`, `openRuleTools()`, `runAction(id, value?)`, `toggleSearch()`, `setLineWrapping(on)`, `toggleLineWrapping()`, `clearDraft()`, `focus()`, `destroy()`.
+`setAnnotations({ diagnostics, rules, source }, { document })` (host results for the current text: underlines, problems panel, a badge and notes per rule in the rules panel; dropped when the text changes), `clearAnnotations()`, `notify(message)`, `refreshToolbar()`, `openRuleTools()`, several documents: `openDocument(id, { text })`, `closeDocument(id)`, `activeDocument()`, `documentIds()`, `getDocumentText(id)`, `getRulesOf(id)`, `getModelOf(id)`, locks: `lockRule(name, { label, canUnlock, url })`, `lockRuleIn(id, name, info)`, `unlockRule(name)`, `isLocked(name)`, `getLocks()`, `runAction(id, value?)`, `toggleSearch()`, `setLineWrapping(on)`, `toggleLineWrapping()`, `clearDraft()`, `focus()`, `destroy()`.
 
-Events: `ready`, `change`, `diagnostics`, `validated`, `format`, `save`, `language`, `action`, `annotationsCleared`.
+Events: `ready`, `change`, `document`, `locks`, `diagnostics`, `validated`, `format`, `save`, `language`, `action`, `annotationsCleared`.
 
 Events (`editor.on(name, fn)`): `ready`, `change`, `diagnostics`, `validated`, `format`, `save`,
 `language`.
