@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/logo.png" alt="rulezet-editor logo" width="200">
+  <img src="docs/images/rulezet-editor.svg" width="360" alt="Rulezet Editor">
 </p>
 
 # rulezet-editor
