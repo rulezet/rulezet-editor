@@ -132,6 +132,8 @@ Without any server at all, `RulezetHost` calls the public Rulezet API straight f
 | `author` | `null` | default author offered by the "Set author" rule tool (Rulezet: the logged-in user) |
 | `fields` | `'auto'` | Fields panel when the pack has `meta` and the host has `ruleFields`; `false` hides it ([rulezet/fields.md](rulezet/fields.md)) |
 | `fieldsOpen` | `true` | the Fields panel is open at start |
+| `lockPasted` | `false` | a pasted rule is locked (unlockable): its fields can be filled, its text stays as pasted |
+| `toast` | `null` | `(message, tone) => void`: the editor's short messages shown with the host's own notifications (Rulezet: its toasts); tone is `info`, `success`, `warning` or `error` |
 | `fieldsReport` | `true` | fields written into the rule by default (a field definition's `report` wins); `false` on an edit page |
 | `tests` | `'auto'` | Test panel when the pack has `test` and the host has `startTest`; `false` hides it ([rulezet/testing.md](rulezet/testing.md)) |
 | `testPollMs` | `700` | how often a running test is polled |

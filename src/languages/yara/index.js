@@ -184,6 +184,28 @@ export default {
             const from = text.lastIndexOf('\n', s.from - 1);
             return [{ from: from < 0 ? s.from : from, to: s.to, insert: '' }];
         },
+        /** "a and (b or c) or d" -> [{ op: null, text: 'a' }, { op: 'and', text: '(b or c)' }, { op: 'or', text: 'd' }]
+         *  (top level only: parentheses, strings and regexes are kept whole). */
+        splitCondition(text) {
+            return splitTopLevel(String(text || ''));
+        },
+        joinCondition(parts) {
+            return parts.filter(p => String(p.text || '').trim())
+                .map((p, i) => (i === 0 ? '' : ` ${p.op === 'or' ? 'or' : 'and'} `) + p.text.trim()).join('');
+        },
+        /** Ready-made clauses offered by the condition form. */
+        clauses(strings) {
+            const ids = strings.map(s => s.id).filter(id => id && id !== '$');
+            return [
+                ...(ids.length ? [{ label: 'any of them', text: 'any of them' }, { label: 'all of them', text: 'all of them' }] : []),
+                ...ids.map(id => ({ label: id, text: id })),
+                { label: 'PE file', text: 'uint16(0) == 0x5A4D' },
+                { label: 'ELF file', text: 'uint32(0) == 0x464C457F' },
+                { label: 'filesize <', text: 'filesize < 2MB' },
+                ...(ids[0] ? [{ label: `${ids[0]} at 0`, text: `${ids[0]} at 0` }, { label: `#${ids[0].slice(1)} > 2`, text: `#${ids[0].slice(1)} > 2` }] : []),
+                { label: 'not …', text: 'not ' + (ids[0] || 'true') },
+            ];
+        },
         setCondition(model, ruleName, condition) {
             const rule = model.rules.find(r => r.name === ruleName);
             if (!rule || rule.openBrace == null) return null;
@@ -235,6 +257,36 @@ export default {
         return ranges;
     },
 };
+
+/** Splits a condition on its top-level and / or (outside parentheses, brackets, strings, regexes). */
+function splitTopLevel(text) {
+    const parts = [];
+    let depth = 0, start = 0, op = null, i = 0;
+    const push = (end, nextOp) => {
+        const piece = text.slice(start, end).trim();
+        if (piece) parts.push({ op, text: piece });
+        op = nextOp;
+    };
+    while (i < text.length) {
+        const c = text[i];
+        if (c === '"') { i++; while (i < text.length && text[i] !== '"') { if (text[i] === '\\') i++; i++; } i++; continue; }
+        if (c === '/' && /matches\s*$/.test(text.slice(0, i))) { i++; while (i < text.length && text[i] !== '/') { if (text[i] === '\\') i++; i++; } i++; continue; }
+        if (c === '(' || c === '[') depth++;
+        else if (c === ')' || c === ']') depth = Math.max(0, depth - 1);
+        else if (depth === 0) {
+            const m = /^(and|or)\b/.exec(text.slice(i));
+            if (m && (i === 0 || /\s|\)/.test(text[i - 1]))) {
+                push(i, m[1]);
+                i += m[1].length;
+                start = i;
+                continue;
+            }
+        }
+        i++;
+    }
+    push(text.length, null);
+    return parts;
+}
 
 /** What the form shows for a string: the text inside the quotes / braces, a regex as written. */
 function bodyValue(s) {

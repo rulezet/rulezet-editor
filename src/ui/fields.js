@@ -9,6 +9,8 @@
 import { h, icon } from './dom.js';
 import { chipColor, isMinVersion, stepVersion, textOn, toMetaValue, validItem } from '../core/fields.js';
 
+let restoring = false;           // focus put back after a re-render: not a user action
+
 const STATUS = {
     synced:   { tone: 'ok',      key: 'fSynced' },
     same:     { tone: 'muted',   key: 'fSame' },
@@ -17,6 +19,8 @@ const STATUS = {
     host:     { tone: 'muted',   key: 'fHostOnly' },
     rule:     { tone: 'info',    key: 'fFromRule' },
     empty:    { tone: 'muted',   key: '' },
+    named:    { tone: 'ok',      key: 'fNamed' },
+    renamed:  { tone: 'info',    key: 'fRenamed' },
 };
 
 export function renderFields(el, view, cb) {
@@ -64,7 +68,8 @@ export function renderFields(el, view, cb) {
     if (focusKey) {
         const again = el.querySelector(`[data-focus-key="${CSS.escape(focusKey)}"]`);
         if (again) {
-            again.focus();
+            restoring = true;
+            try { again.focus(); } finally { restoring = false; }
             if (caret && 'setSelectionRange' in again) { try { again.setSelectionRange(caret[0], caret[1]); } catch { /* not a text input */ } }
         }
     }
@@ -76,7 +81,7 @@ function fieldRow(def, view, cb) {
     const status = view.statusOf(def);
     const st = STATUS[status];
     const ruleValue = view.ruleValueOf(def);
-    const key = def.meta && def.meta.key;
+    const key = def.meta && (view.metaKeyOf ? view.metaKeyOf(def) : def.meta.key);
     const id = def.id;            // not the rule's name: the title field renames the rule while typing
 
     const label = h('div', { class: 'rze-field-label' },
@@ -93,7 +98,7 @@ function fieldRow(def, view, cb) {
 
     const parts = [label, input, report];
     if (status === 'conflict') {
-        parts.push(h('div', { class: 'rze-field-conflict' },
+        parts.push(h('div', { class: 'rze-field-conflict-box' },
             h('div', {}, t('fRuleSays'), ' ', h('code', { text: toMetaValue(def, ruleValue) })),
             h('div', { class: 'rze-field-actions' },
                 h('button', { type: 'button', class: 'rze-btn', onclick: () => cb.onResolve(def, 'rule') }, t('fUseRule')),
@@ -101,11 +106,11 @@ function fieldRow(def, view, cb) {
                 h('button', { type: 'button', class: 'rze-btn', onclick: () => cb.onResolve(def, 'keep') }, t('fKeepDifferent'))),
             h('div', { class: 'rze-field-hint', text: t('fKeepHint') })));
     } else if (status === 'kept') {
-        parts.push(h('div', { class: 'rze-field-kept' },
+        parts.push(h('div', { class: 'rze-field-kept-box' },
             h('span', {}, t('fRuleSays'), ' ', h('code', { text: toMetaValue(def, ruleValue) })),
             h('button', { type: 'button', class: 'rze-link-btn', onclick: () => cb.onResolve(def, 'undo') }, t('fReconsider'))));
     }
-    return h('div', { class: `rze-field rze-field-${status}` }, ...parts);
+    return h('div', { class: `rze-field rze-field--${status}` }, ...parts);
 }
 
 function editorFor(def, value, view, cb, id) {
@@ -151,24 +156,42 @@ function searchableSelect(def, value, view, cb, id) {
     const q = open ? (ui.selectQuery || '') : '';
     const options = (def.options || []).filter(o => !q || String(o.label ?? o.value).toLowerCase().includes(q.toLowerCase()));
     const current = (def.options || []).find(o => String(o.value) === String(value));
+    const exact = q && (def.options || []).some(o => String(o.value).toLowerCase() === q.trim().toLowerCase());
+    const offerTyped = def.free && q.trim() && !exact;      // a value that is not in the list
     return h('div', { class: 'rze-field-combo' },
         h('div', { class: 'rze-field-combo-box' },
             h('input', { class: 'rze-field-input', type: 'text', 'data-focus-key': id,
                 value: open ? q : (current ? (current.label ?? current.value) : (value || '')),
                 placeholder: def.placeholder || t('fSearchOption'),
-                onfocus: () => { if (!open) cb.onSelect(def, ''); },
+                onfocus: () => { if (!open && !restoring) cb.onSelect(def, ''); },
                 oninput: e => cb.onSelect(def, e.target.value),
                 onkeydown: e => {
-                    if (e.key === 'Enter') { e.preventDefault(); if (options[0]) { cb.onValue(def, options[0].value); cb.onSelect(null); } }
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const typed = q.trim();
+                        const same = (def.options || []).find(o => String(o.value).toLowerCase() === typed.toLowerCase());
+                        if (same) cb.onValue(def, same.value);
+                        else if (def.free && typed) cb.onValue(def, typed);
+                        else if (options[0]) cb.onValue(def, options[0].value);
+                        cb.onSelect(null);
+                    }
                     if (e.key === 'Escape') cb.onSelect(null);
                 },
-                onblur: () => setTimeout(() => cb.onSelect(null, null, def.id), 150) }),
+                // a re-render puts the focus back on the new input: only a real leave closes the list
+                onblur: () => setTimeout(() => {
+                    const a = document.activeElement;
+                    if (a && a.dataset && a.dataset.focusKey === id) return;
+                    cb.onSelect(null, null, def.id);
+                }, 150) }),
             value ? h('button', { type: 'button', class: 'rze-field-clear', 'aria-label': 'Clear', onclick: () => cb.onValue(def, '') }, '×') : ''),
         open ? h('ul', { class: 'rze-field-suggest', role: 'listbox' },
+            offerTyped ? h('li', { class: 'rze-field-typed', onmousedown: e => { e.preventDefault(); cb.onValue(def, q.trim()); cb.onSelect(null); } },
+                h('span', {}, t('fUseTyped'), ' ', h('b', { text: q.trim() }))) : '',
             ...(options.length ? options.slice(0, 200).map(o => h('li', {
                 role: 'option', class: String(o.value) === String(value) ? 'rze-on' : '',
                 onmousedown: e => { e.preventDefault(); cb.onValue(def, o.value); cb.onSelect(null); },
-            }, h('span', { text: o.label ?? o.value }))) : [h('li', { class: 'rze-muted', text: t('fNoMatch') })])) : '');
+            }, h('span', { text: o.label ?? o.value }))) : (offerTyped ? [] : [h('li', { class: 'rze-muted', text: t('fNoMatch') })]))) : '',
+        value && !current ? h('div', { class: 'rze-field-hint', text: t('fNotInList') }) : '');
 }
 
 /** Lists: Rulezet's VulnerabilityInput / AttackInput / TagInput, one shared look. */
@@ -325,20 +348,42 @@ function bodySection(view, cb) {
                 onchange: e => put({ value: e.target.value }), onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } } }),
             mods.length ? h('div', { class: 'rze-str-mods' }, ...mods) : '');
     });
-    const ids = b.strings.map(s => s.id).filter(Boolean);
-    const insert = (snippet) => cb.onCondition(b.condition && b.condition !== 'true' ? `${b.condition} and ${snippet}` : snippet);
+    // condition: one row per top-level clause, joined by and / or — no second free-text copy of it
+    const parts = view.splitCondition ? view.splitCondition(b.condition || '') : [{ op: null, text: b.condition || '' }];
+    const shown = parts.length === 1 && parts[0].text === 'true' ? [] : parts;
+    const write = (next) => cb.onCondition(view.joinCondition(next) || 'true');
+    const nextOp = (view.ui && view.ui.condOp) || 'and';
+    const clauseRows = shown.map((p, i) => h('div', { class: 'rze-cond-row' },
+        i === 0 ? h('span', { class: 'rze-cond-first', text: t('fWhen') })
+            : h('select', { class: `rze-cond-op rze-cond-op-${p.op}`, disabled: locked, 'data-focus-key': `cond:${i}:op`,
+                onchange: e => write(shown.map((x, j) => (j === i ? { ...x, op: e.target.value } : x))) },
+                h('option', { value: 'and', text: 'and', selected: p.op !== 'or' }), h('option', { value: 'or', text: 'or', selected: p.op === 'or' })),
+        h('input', { class: 'rze-field-input rze-mono rze-cond-text', type: 'text', value: p.text, disabled: locked, 'data-focus-key': `cond:${i}:text`,
+            onchange: e => write(shown.map((x, j) => (j === i ? { ...x, text: e.target.value } : x))),
+            onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } } }),
+        h('button', { type: 'button', class: 'rze-icon-btn', 'aria-label': t('fRemoveClause'), disabled: locked,
+            onclick: () => write(shown.filter((_, j) => j !== i).map((x, j) => (j === 0 ? { ...x, op: null } : x))) }, icon('close'))));
+    const add = (text) => write([...shown, { op: shown.length ? nextOp : null, text }]);
+    const clauses = view.conditionClauses ? view.conditionClauses(b.strings) : [];
     return h('section', { class: 'rze-body' },
         h('div', { class: 'rze-body-title' }, h('strong', { text: t('fBody') }), h('span', { class: 'rze-muted', text: t('fBodyHint') })),
         h('div', { class: 'rze-field-label' }, h('span', { text: t('fStrings') }), h('span', { class: 'rze-fields-badge', text: String(b.strings.length) })),
         ...rows,
         h('button', { type: 'button', class: 'rze-btn rze-str-add', disabled: locked,
-            onclick: () => cb.onString(null, { id: nextId(ids), kind: 'text', value: 'change me', modifiers: [] }) }, icon('plus'), t('fAddString')),
-        h('div', { class: 'rze-field-label' }, h('span', { text: t('fCondition') })),
-        h('textarea', { class: 'rze-field-input rze-mono rze-cond', rows: '3', 'data-focus-key': 'condition', disabled: locked,
-            onchange: e => cb.onCondition(e.target.value) }, b.condition || ''),
+            onclick: () => cb.onString(null, { id: nextId(b.strings.map(s => s.id)), kind: 'text', value: 'change me', modifiers: [] }) }, icon('plus'), t('fAddString')),
+        h('div', { class: 'rze-field-label' }, h('span', { text: t('fCondition') }),
+            shown.length ? '' : h('span', { class: 'rze-fields-badge', text: t('fAlwaysTrue') })),
+        ...clauseRows,
+        h('div', { class: 'rze-cond-add' },
+            h('span', { class: 'rze-muted', text: shown.length ? t('fAddWith') : t('fAddFirst') }),
+            shown.length ? h('span', { class: 'rze-cond-opswitch' },
+                ...['and', 'or'].map(op => h('button', { type: 'button', class: nextOp === op ? 'rze-on' : '', onclick: () => cb.onCondOp(op) }, op))) : '',
+            h('input', { class: 'rze-field-input rze-mono rze-cond-new', type: 'text', placeholder: t('fClausePlaceholder'), disabled: locked,
+                'data-focus-key': 'cond:new',
+                onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); const v = e.target.value.trim(); if (v) add(v); } } })),
         h('div', { class: 'rze-cond-quick' },
-            ...['any of them', 'all of them'].map(q => h('button', { type: 'button', class: 'rze-field-chip rze-cond-chip', disabled: locked, onclick: () => cb.onCondition(q) }, q)),
-            ...ids.map(id => h('button', { type: 'button', class: 'rze-field-chip rze-cond-chip rze-mono', disabled: locked, title: t('fAndString', { id }), onclick: () => insert(id) }, `+ ${id}`))));
+            ...clauses.map(c => h('button', { type: 'button', class: 'rze-field-chip rze-cond-chip rze-mono', disabled: locked,
+                title: t('fAddClause', { text: c.text }), onclick: () => add(c.text) }, `+ ${c.label}`))));
 }
 
 function nextId(ids) {

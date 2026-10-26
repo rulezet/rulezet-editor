@@ -1,7 +1,7 @@
 /** Rules panel: every rule of the document with its status, strings and actions. */
 import { h, icon } from './dom.js';
 
-export function renderOutline(el, rules, { t, filter, onFilter, onSelect, onSelectChild, onCopy, onClose, activeFrom }) {
+export function renderOutline(el, rules, { t, filter, onFilter, onSelect, onSelectChild, onCopy, onToggleLock, onClose, activeFrom }) {
     const q = filter.trim().toLowerCase();
     const shown = q ? rules.filter(r => r.name.toLowerCase().includes(q) || (r.tags || []).some(tag => tag.toLowerCase().includes(q))) : rules;
     const totals = rules.reduce((a, r) => ({ e: a.e + r.errors, w: a.w + r.warnings }), { e: 0, w: 0 });
@@ -23,6 +23,13 @@ export function renderOutline(el, rules, { t, filter, onFilter, onSelect, onSele
             icon(status, `rze-sev-${status}`),
             h('button', { type: 'button', class: 'rze-outline-name', title: `${r.kind} ${r.name}`, onclick: () => onSelect(r) }, r.name),
             r.errors || r.warnings ? h('span', { class: 'rze-outline-count', text: `${r.errors ? r.errors + 'E' : ''}${r.errors && r.warnings ? ' ' : ''}${r.warnings ? r.warnings + 'W' : ''}` }) : '',
+            onToggleLock ? h('button', {
+                type: 'button', class: `rze-icon-btn rze-outline-lock${r.locked ? ' rze-on' : ''}`,
+                disabled: !!r.locked && !r.locked.canUnlock,
+                title: r.locked ? (r.locked.canUnlock ? t('unlockRule') : t('lockedReadOnly')) : t('lockRuleHint'),
+                'aria-label': `${r.locked ? t('unlock') : t('lockRule')} ${r.name}`,
+                onclick: () => onToggleLock(r),
+            }, icon(r.locked ? 'lock' : 'unlock')) : '',
             h('button', { type: 'button', class: 'rze-icon-btn', title: t('copy'), 'aria-label': `${t('copy')} ${r.name}`, onclick: () => onCopy(r) }, icon('copy')),
         );
         const a = r.annotation;

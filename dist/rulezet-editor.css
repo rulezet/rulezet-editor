@@ -158,6 +158,10 @@
 .rze-icon-btn { padding: 3px 5px; }
 .rze-btn:hover, .rze-icon-btn:hover { background: var(--rze-active-line); border-color: var(--rze-border); }
 .rze-btn:focus-visible, .rze-icon-btn:focus-visible { outline: 2px solid var(--rze-accent); outline-offset: 1px; }
+.rze-outline-lock.rze-on { color: var(--rze-warning); }
+.rze-icon-btn:disabled { opacity: .4; cursor: default; }
+.rze-icon-only { padding-left: 6px; padding-right: 6px; }
+.rze-btn:disabled { opacity: .4; cursor: default; }
 .rze-btn-active { background: var(--rze-selection-match); border-color: var(--rze-border); }
 .rze-btn-primary { background: var(--rze-accent); color: #fff; }
 .rze-btn-fix { padding: 1px 7px; font-size: 12px; border-color: var(--rze-border); }
@@ -299,20 +303,20 @@ textarea.rze-field-input { resize: vertical; font-family: inherit; }
 .rze-fields-badge.rze-tone-info { background: color-mix(in srgb, var(--rze-info) 14%, transparent); }
 .rze-fields-badge.rze-tone-warning { background: color-mix(in srgb, var(--rze-warning) 18%, transparent); }
 .rze-field { display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--rze-border); border-radius: 8px; background: var(--rze-bg); }
-.rze-field-conflict { border-color: var(--rze-warning); }
-.rze-field.rze-field-conflict { border-color: var(--rze-warning); box-shadow: inset 3px 0 0 var(--rze-warning); }
+.rze-field--conflict { border-color: var(--rze-warning); box-shadow: inset 3px 0 0 var(--rze-warning); }
+.rze-field--kept { box-shadow: inset 3px 0 0 var(--rze-info); }
 .rze-field-label { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .rze-field-label .rze-fields-badge { margin-left: auto; }
 .rze-field-help { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--rze-border); font-size: 9.5px; color: var(--rze-muted); cursor: help; }
 .rze-field-report { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--rze-muted); cursor: pointer; }
 .rze-field-report input { margin: 0; accent-color: var(--rze-accent); }
-.rze-field-report code, .rze-field-conflict code, .rze-field-kept code { font-family: var(--rze-font); font-size: 11.5px; color: var(--rze-fg); background: var(--rze-active-line); padding: 0 4px; border-radius: 3px; word-break: break-all; }
+.rze-field-report code, .rze-field-conflict-box code, .rze-field-kept-box code { font-family: var(--rze-font); font-size: 11.5px; color: var(--rze-fg); background: var(--rze-active-line); padding: 0 4px; border-radius: 3px; word-break: break-all; }
 .rze-field-report.rze-disabled { opacity: .5; cursor: default; }
-div.rze-field-conflict { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; border-radius: 6px; background: color-mix(in srgb, var(--rze-warning) 10%, transparent); }
+.rze-field-conflict-box { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; border-radius: 6px; background: color-mix(in srgb, var(--rze-warning) 10%, transparent); }
 .rze-field-actions { display: flex; flex-wrap: wrap; gap: 4px; }
 .rze-field-actions .rze-btn { font-size: 11.5px; padding: 2px 8px; border: 1px solid var(--rze-border); background: var(--rze-bg); }
 .rze-field-hint { font-size: 11px; color: var(--rze-muted); }
-.rze-field-kept { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--rze-muted); }
+.rze-field-kept-box { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--rze-muted); }
 .rze-link-btn { border: 0; background: none; padding: 0; font: inherit; color: var(--rze-accent); cursor: pointer; text-decoration: underline; }
 .rze-field-list { position: relative; border: 1px solid var(--rze-border); border-radius: 6px; background: var(--rze-bg); }
 .rze-field-chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; }
@@ -354,6 +358,7 @@ div.rze-field-conflict { display: flex; flex-direction: column; gap: 6px; paddin
 .rze-field-chip.rze-colored button { color: inherit; opacity: .75; }
 .rze-field-chip small { opacity: .75; font-size: 10.5px; }
 .rze-field-chip-label { font-weight: 600; }
+.rze-field-typed { border-bottom: 1px solid var(--rze-border); color: var(--rze-accent); }
 .rze-field-suggest li.rze-on { background: color-mix(in srgb, var(--rze-accent) 12%, transparent); }
 .rze-field-opt-label { display: inline-flex; align-items: center; gap: 6px; font-family: var(--rze-font); font-size: 12px; }
 .rze-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
@@ -390,7 +395,16 @@ div.rze-field-conflict { display: flex; flex-direction: column; gap: 6px; paddin
 .rze-str-mod.rze-on button { background: color-mix(in srgb, var(--rze-accent) 14%, transparent); color: var(--rze-accent); font-weight: 600; }
 .rze-str-mod-args { width: 84px; border: 0; border-left: 1px solid var(--rze-border); background: var(--rze-bg); color: var(--rze-fg); font-family: var(--rze-font); font-size: 11px; padding: 1px 6px; outline: none; }
 .rze-str-add { align-self: flex-start; font-size: 12px; border: 1px dashed var(--rze-border); }
-.rze-cond { min-height: 60px; }
+.rze-cond-row { display: grid; grid-template-columns: 52px 1fr auto; gap: 4px; align-items: center; }
+.rze-cond-first { font-size: 11px; color: var(--rze-muted); text-align: center; text-transform: uppercase; letter-spacing: .04em; }
+.rze-cond-op { font: inherit; font-size: 11.5px; font-weight: 700; padding: 3px 4px; border: 1px solid var(--rze-border); border-radius: 6px; background: var(--rze-panel-bg); color: var(--rze-keyword); }
+.rze-cond-op-or { color: var(--rze-warning); }
+.rze-cond-add { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.rze-cond-add .rze-muted { font-size: 11.5px; }
+.rze-cond-new { flex: 1; min-width: 140px; }
+.rze-cond-opswitch { display: inline-flex; border: 1px solid var(--rze-border); border-radius: 6px; overflow: hidden; }
+.rze-cond-opswitch button { border: 0; background: var(--rze-bg); color: var(--rze-muted); font: inherit; font-size: 11.5px; font-weight: 700; padding: 2px 9px; cursor: pointer; }
+.rze-cond-opswitch button.rze-on { background: var(--rze-accent); color: #fff; }
 .rze-cond-quick { display: flex; flex-wrap: wrap; gap: 4px; }
 .rze-cond-chip { border: 1px solid var(--rze-border); cursor: pointer; padding: 1px 8px; color: var(--rze-fg); }
 .rze-cond-chip:hover { border-color: var(--rze-accent); }

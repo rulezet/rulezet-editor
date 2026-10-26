@@ -56,7 +56,12 @@ export function readField(def, entries) {
         ? entries.filter(e => (def.meta.extractFrom || []).map(k => k.toLowerCase()).includes(e.key.toLowerCase())).map(e => e.value)
         : [];
     if (!own.length && !extra.length) return null;
-    if (def.type !== 'list') return own.length ? own[0] : null;
+    if (def.type !== 'list') {
+        if (!own.length) return null;
+        // a select: the option the rule names, whatever its case (agpl-3.0 -> AGPL-3.0)
+        const hit = (def.options || []).find(o => String(o.value).toLowerCase() === String(own[0]).trim().toLowerCase());
+        return hit ? String(hit.value) : own[0];
+    }
     let items;
     if (def.meta.extract && EXTRACT[def.meta.extract]) {
         const re = EXTRACT[def.meta.extract];
@@ -81,10 +86,17 @@ export function toMetaValue(def, value) {
  *  conflict   the rule says something else and the user has not decided
  *  host       only in the host (not written in the rule, the rule says nothing)
  *  rule       the rule has a value the field does not (empty field)
- *  empty      nothing anywhere */
-export function fieldStatus(def, state, ruleValue) {
+ *  empty      nothing anywhere
+ *  named      (title-like field) the same as the rule's name
+ *  renamed    (title-like field) different from the rule's name: the host keeps its own title */
+export function fieldStatus(def, state, ruleValue, ruleName = null) {
     const value = state.values[def.id];
     const has = !isEmpty(def, value);
+    // a title-like field is compared with the rule's own name
+    if (def.fromRuleName && !def.meta && ruleName) {
+        if (!has) return 'empty';
+        return String(value).trim() === ruleName ? 'named' : 'renamed';
+    }
     if (ruleValue === null || ruleValue === undefined) return has ? 'host' : 'empty';
     if (!has) return 'rule';
     if (sameValue(def, value, ruleValue)) return state.report[def.id] ? 'synced' : 'same';
@@ -98,7 +110,9 @@ export function initialState(defs, entries, reportDefault, ruleName = null) {
         // a title-like field starts as the rule's own name (what the host uses when it is empty)
         const fromRule = readField(def, entries) ?? (def.fromRuleName && ruleName ? ruleName : null);
         state.values[def.id] = fromRule ?? emptyValue(def);
-        state.report[def.id] = !!def.meta && (def.report ?? reportDefault);
+        // reportDefault false (a rule already written): never ticked; true (built from the panel):
+        // ticked unless the field's definition says otherwise
+        state.report[def.id] = !!def.meta && !!reportDefault && (def.report ?? true);
         state.keep[def.id] = false;
     }
     return state;

@@ -18,7 +18,7 @@ import {
     StreamLanguage, foldGutter, foldService, indentOnInput, bracketMatching, foldKeymap, indentUnit,
     foldAll, unfoldAll,
 } from '@codemirror/language';
-import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment, undo, redo } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
 import {
     autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap, snippetCompletion, startCompletion,
 } from '@codemirror/autocomplete';
@@ -65,7 +65,10 @@ const DEFAULTS = {
     buttons: [],                 // host page buttons in the toolbar: [{ id, label, icon?, title?, primary?, disabled?(), run(editor) }]                // default author for authoring actions (e.g. the logged-in user)
     lineWrapping: null,          // null: last choice of this viewer (default off)
     fields: 'auto',              // Fields panel: 'auto' = when the pack has `meta` and the host has ruleFields; false = never
-    fieldsReport: true,          // fields written into the rule by default (a field definition's `report` wins)
+    fieldsReport: true,          // fields written into a rule built from the panel (empty document); a rule already
+                                 // in the text never gets fields written into it unless the user ticks them
+    toast: null,                 // (message, tone) => void: show the editor's messages with the host's own notifications
+    lockPasted: false,           // a pasted rule is locked (unlockable): fields can be filled, its text is kept as is
     fieldsOpen: true,            // the Fields panel is open when the editor starts (when it is available)
     tests: 'auto',               // Test panel: 'auto' = when the pack has `test` and the host has startTest; false = never
     testPollMs: 700,             // how often a running test is polled
@@ -179,7 +182,7 @@ export class RulezetEditor {
         if (!this.pack.format || this.options.readOnly) return null;
         const res = this.pack.format(this.getModel(), this.options.format);
         if (!res || res.text === this.getValue()) {
-            this._toast(this.t('formatted', { n: res ? res.formatted : 0 }) + (res && res.skipped.length ? ` · ${this.t('formatSkipped', { n: res.skipped.length })}` : ''));
+            this._toast(this.t('formatted', { n: res ? res.formatted : 0 }) + (res && res.skipped.length ? ` · ${this.t('formatSkipped', { n: res.skipped.length })}` : ''), 'success');
             return res;
         }
         const { state } = this.view;
@@ -188,7 +191,7 @@ export class RulezetEditor {
         const doc = this.view.state.doc;
         const target = doc.line(Math.min(line.number, doc.lines));
         this.view.dispatch({ selection: { anchor: target.from }, scrollIntoView: true });
-        this._toast(this.t('formatted', { n: res.formatted }) + (res.skipped.length ? ` · ${this.t('formatSkipped', { n: res.skipped.length })}` : ''));
+        this._toast(this.t('formatted', { n: res.formatted }) + (res.skipped.length ? ` · ${this.t('formatSkipped', { n: res.skipped.length })}` : ''), 'success');
         this.events.emit('format', res);
         return res;
     }
@@ -349,7 +352,8 @@ export class RulezetEditor {
      *   info: { label, canUnlock, url }
      */
     lockRule(name, info = {}) {
-        this._locks.set(name, { label: info.label || (this.host ? this.host.name : ''), canUnlock: !!info.canUnlock, url: info.url || null });
+        this._locks.set(name, { label: info.label || (this.host ? this.host.name : ''), canUnlock: !!info.canUnlock, url: info.url || null,
+                                text: info.text || null, hint: info.hint || null });
         this.view.dispatch({ effects: locksChanged.of(null) });
         this._afterLint(this.getModel());
         this.events.emit('locks', this.getLocks());
@@ -367,7 +371,7 @@ export class RulezetEditor {
     getLocks() { return [...this._locks].map(([name, info]) => ({ name, ...info })); }
 
     /** Short message at the bottom of the editor. */
-    notify(message) { this._toast(message); }
+    notify(message, tone = 'info') { this._toast(message, tone); }
 
     /** Re-renders the toolbar (host buttons whose disabled() changed). */
     refreshToolbar() { this._renderToolbar(); }
@@ -536,7 +540,7 @@ export class RulezetEditor {
         let res;
         try { res = action.run(fresh, value); } catch (e) { res = { error: e.message }; }
         if (!res || res.error || !res.length) {
-            this._toast(res && res.error ? res.error : this.t('nothingToDo'));
+            this._toast(res && res.error ? res.error : this.t('nothingToDo'), res && res.error ? 'warning' : 'info');
             this.view.focus();
             return false;
         }
@@ -964,7 +968,7 @@ export class RulezetEditor {
         }
         this.view.dispatch({ changes, userEvent: 'input.insert', scrollIntoView: true });
         this.lockRule(rule.name, { canUnlock: !!rule.can_edit, url: rule.url });
-        this._toast(`${rule.name}: inserted`);
+        this._toast(`${rule.name}: inserted`, 'success');
     }
 
     _externalAt(pos) {
@@ -1101,6 +1105,15 @@ export class RulezetEditor {
                 this._timers.draft = setTimeout(() => this._drafts().saveDraft(this.options.draftKey, this.getValue()), 800);
             }
         }
+        if (update.docChanged || update.transactions.length) this._updateHistoryButtons();
+        if (update.docChanged && this.options.lockPasted && this.pack.splitRules) {
+            const pasted = [];
+            for (const tr of update.transactions) {
+                if (!tr.isUserEvent('input.paste') && !tr.isUserEvent('input.drop')) continue;
+                tr.changes.iterChangedRanges((fromA, toA, fromB, toB) => { if (toB > fromB) pasted.push([fromB, toB]); });
+            }
+            if (pasted.length) queueMicrotask(() => this._lockPasted(pasted));
+        }
         if (update.selectionSet || update.docChanged) {
             this._renderCursor();
             this._highlightActiveRule();
@@ -1112,6 +1125,25 @@ export class RulezetEditor {
     }
 
     /** Host buttons stay disabled until the editor exists; a throwing disabled() disables. */
+    /** Every rule a paste brought in (or touched) is locked: its text stays what was pasted until
+     *  the user unlocks it; the Fields panel can still fill the rule's fields (stored apart). */
+    _lockPasted(ranges) {
+        if (this._destroyed) return;
+        const rules = this.pack.splitRules(this.getModel());
+        for (const r of rules) {
+            if (!r.name || r.name === '(unnamed)' || this._locks.has(r.name)) continue;
+            if (!ranges.some(([a, b]) => a < r.to && b > r.from)) continue;
+            this.lockRule(r.name, { label: this.t('pasted'), canUnlock: true, text: this.t('lockedPasted'), hint: this.t('unlockPastedHint') });
+        }
+    }
+
+    /** Undo / redo buttons: greyed out when there is nothing to undo / redo. */
+    _updateHistoryButtons() {
+        if (!this.undoBtn || !this.view) return;
+        this.undoBtn.disabled = undoDepth(this.view.state) === 0;
+        this.redoBtn.disabled = redoDepth(this.view.state) === 0;
+    }
+
     _hostButtonDisabled(b) {
         if (!this.view) return true;
         if (typeof b.disabled !== 'function') return !!b.disabled;
@@ -1134,8 +1166,14 @@ export class RulezetEditor {
             h('button', { type: 'button', class: `rze-btn${active ? ' rze-btn-active' : ''}`, title, 'aria-label': label, onclick: onClick }, icon(name), h('span', { class: 'rze-btn-label', text: label }));
         const fs = this.root && this.root.classList.contains('rze-fullscreen');
         const dark = this.root && this.root.classList.contains('rze-dark');
+        this.undoBtn = h('button', { type: 'button', class: 'rze-btn rze-icon-only', title: `${t('undo')} (Ctrl+Z)`, 'aria-label': t('undo'),
+            onclick: () => { undo(this.view); this.view.focus(); } }, icon('undo'));
+        this.redoBtn = h('button', { type: 'button', class: 'rze-btn rze-icon-only', title: `${t('redo')} (Ctrl+Shift+Z / Ctrl+Y)`, 'aria-label': t('redo'),
+            onclick: () => { redo(this.view); this.view.focus(); } }, icon('redo'));
         this.toolbarEl.replaceChildren(
             h('span', { class: 'rze-toolbar-lang', text: this.pack.name }),
+            h('span', { class: 'rze-toolbar-sep' }),
+            this.undoBtn, this.redoBtn,
             h('span', { class: 'rze-toolbar-sep' }),
             this.pack.snippets ? btn('plus', 'New rule', () => this.newRule()) : '',
             this.pack.actions ? btn('tools', t('ruleTools'), () => this.openRuleTools(), false, `${t('ruleTools')} (Ctrl+Shift+R)`) : '',
@@ -1157,6 +1195,7 @@ export class RulezetEditor {
             btn('wrap', t('wrap'), () => this.toggleLineWrapping(), !!this.options.lineWrapping, `${t('wrap')} (Alt+Z)`),
             btn(fs ? 'collapse' : 'expand', t('fullscreen'), () => this.toggleFullscreen()),
         );
+        this._updateHistoryButtons();
     }
 
     _renderStatus() {
@@ -1264,7 +1303,7 @@ export class RulezetEditor {
         let target = name;
         if (name === DRAFT) target = this._createRuleFromFields({ strings: false });   // the form adds the strings itself
         if (!target) return;
-        if (this._locks.has(target)) { this._toast(this.t('lockedUnlockFirst', { name: target })); return; }
+        if (this._locks.has(target)) { this._toast(this.t('lockedUnlockFirst', { name: target }), 'warning'); return; }
         const changes = make(this.getModel(), target);
         if (changes && changes.length) this.view.dispatch({ changes, userEvent: 'input.fields' });
         this._renderFields();
@@ -1301,7 +1340,9 @@ export class RulezetEditor {
         if (!F.byRule.has(name)) {
             const entries = this._ruleEntries(name);
             if (!entries && !force) return null;
-            F.byRule.set(name, initialState(F.defs, entries || [], this.options.fieldsReport, name));
+            // a rule that already exists in the text (pasted, loaded): nothing is written into it by
+            // default — the fields are filled from it and only written back where the user ticks
+            F.byRule.set(name, initialState(F.defs, entries || [], false, name));
         }
         return F.byRule.get(name);
     }
@@ -1324,11 +1365,13 @@ export class RulezetEditor {
 
     _writeField(name, def, value) {
         if (!def.meta || !this.pack.meta) return;
-        if (this._locks.has(name)) { this._toast(this.t('lockedUnlockFirst', { name })); return; }
+        if (this._locks.has(name)) { this._toast(this.t('lockedUnlockFirst', { name }), 'warning'); return; }
         const model = this.getModel();
+        // the key the rule already uses for this field (licence for license...), else the field's own
+        const key = this._metaKeyFor(name, def);
         const changes = isEmpty(def, value)
-            ? this.pack.meta.remove(model, name, def.meta.key)
-            : this.pack.meta.set(model, name, def.meta.key, toMetaValue(def, value));
+            ? this.pack.meta.remove(model, name, key)
+            : this.pack.meta.set(model, name, key, toMetaValue(def, value));
         if (!changes || !changes.length) return;
         this._fields.writing = true;
         try {
@@ -1344,6 +1387,15 @@ export class RulezetEditor {
         const F = this._fields;
         F.namedByPanel = F.namedByPanel || new Set();
         return name === 'new_rule' || F.namedByPanel.has(name);
+    }
+
+    /** The key a field is written under in this rule: the one the rule already uses (licence for
+     *  license...), else the field's own. */
+    _metaKeyFor(name, def) {
+        if (!def.meta) return null;
+        const names = [def.meta.key, ...(def.meta.aliases || [])].filter(k => !k.startsWith('@')).map(k => k.toLowerCase());
+        const used = name && name !== DRAFT ? (this.pack.meta.entries(this.getModel(), name) || []).find(e => names.includes(e.key.toLowerCase())) : null;
+        return used ? used.key : def.meta.key;
     }
 
     _fieldsChanged(name) {
@@ -1375,8 +1427,12 @@ export class RulezetEditor {
             draft: name === DRAFT, me: this.options.author || null,
             body: this.pack.body ? (name === DRAFT ? { strings: [], condition: '' } : (name ? this.pack.body.read(this.getModel(), name) : null)) : null,
             bodyModifiers: this.pack.body ? this.pack.body.modifiers : null,
+            splitCondition: this.pack.body && this.pack.body.splitCondition,
+            joinCondition: this.pack.body && this.pack.body.joinCondition,
+            conditionClauses: this.pack.body && this.pack.body.clauses,
             state, locked: name ? this._locks.has(name) : false, loading: F.loading, error: F.error, suggest: F.suggest, ui: F.ui,
-            statusOf: (def) => fieldStatus(def, state, ruleValueOf(def)), ruleValueOf,
+            statusOf: (def) => fieldStatus(def, state, ruleValueOf(def), name === DRAFT ? null : name), ruleValueOf,
+            metaKeyOf: (def) => this._metaKeyFor(name, def),
         }, {
             t: this.t,
             onClose: () => this.toggleFields(false),
@@ -1416,6 +1472,7 @@ export class RulezetEditor {
             },
             onString: (index, s) => this._editBody(name, (model, rule) => this.pack.body.setString(model, rule, index, s)),
             onStringRemove: (index) => this._editBody(name, (model, rule) => this.pack.body.removeString(model, rule, index)),
+            onCondOp: (op) => { F.ui = { ...F.ui, condOp: op }; this._renderFields(); },
             onCondition: (text) => this._editBody(name, (model, rule) => this.pack.body.setCondition(model, rule, text)),
             onFormats: (def) => { F.ui = { ...F.ui, formats: def ? def.id : null }; this._renderFields(); },
             onSelect: (def, query = '', onlyIf = null) => {
@@ -1601,7 +1658,16 @@ export class RulezetEditor {
             onFilter: (v) => { this._outlineFilter = v; this._renderOutline(); },
             onSelect: (r) => this.goTo(r.from),
             onSelectChild: (c) => this.goTo(c.from),
-            onCopy: async (r) => { try { await navigator.clipboard.writeText(r.text); this._toast(this.t('copied')); } catch { /* clipboard blocked */ } },
+            onCopy: async (r) => { try { await navigator.clipboard.writeText(r.text); this._toast(this.t('copied'), 'success'); } catch { /* clipboard blocked */ } },
+            onToggleLock: (r) => {
+                if (!r.name || r.name === '(unnamed)') return;
+                if (this._locks.has(r.name)) {
+                    if (this._locks.get(r.name).canUnlock) this.unlockRule(r.name);
+                    else this._toast(this.t('lockedNoRight', { name: r.name }), 'warning');
+                } else {
+                    this.lockRule(r.name, { label: this.t('lockedByYou'), canUnlock: true, text: this.t('lockedManual'), hint: this.t('unlockManualHint') });
+                }
+            },
             onClose: () => this.toggleOutline(false),
             activeFrom: this._activeRuleFrom,
         });
@@ -1634,7 +1700,12 @@ export class RulezetEditor {
         });
     }
 
-    _toast(message) {
+    /** A short message to the user: the host's own notifications when it gives `toast`, else the
+     *  editor's. tone: info | success | warning | error. */
+    _toast(message, tone = 'info') {
+        if (typeof this.options.toast === 'function') {
+            try { this.options.toast(message, tone); return; } catch { /* fall back to the editor's own */ }
+        }
         this.toastEl.textContent = message;
         this.toastEl.classList.add('rze-toast-show');
         clearTimeout(this._timers.toast);
@@ -1668,7 +1739,7 @@ export class RulezetEditor {
             { id: 'fullscreen', label: 'Toggle full screen', key: 'Esc to leave', run: () => this.toggleFullscreen() },
             { id: 'undo', label: 'Undo', key: 'Ctrl+Z', run: () => undo(v) },
             { id: 'redo', label: 'Redo', key: 'Ctrl+Shift+Z', run: () => redo(v) },
-            { id: 'copyAll', label: 'Copy the whole document', run: async () => { try { await navigator.clipboard.writeText(this.getValue()); this._toast(t('copied')); } catch { /* blocked */ } } },
+            { id: 'copyAll', label: 'Copy the whole document', run: async () => { try { await navigator.clipboard.writeText(this.getValue()); this._toast(t('copied'), 'success'); } catch { /* blocked */ } } },
             ...listLanguages().filter(p => p.id !== this.pack.id).map(p => ({ id: `lang:${p.id}`, label: `Change language: ${p.name}`, run: () => this.setLanguage(p.id) })),
         ];
         for (const r of this._rules || []) cmds.push({ id: `rule:${r.from}`, label: `${t('goTo')} ${t('rule')}: ${r.name}`, key: `${t('line')} ${r.line}`, run: () => this.goTo(r.from) });
@@ -1770,16 +1841,16 @@ function ruleLocks(editor) {
 
     class LockBar extends WidgetType {
         constructor(name, info) { super(); this.name = name; this.info = info; }
-        eq(other) { return other.name === this.name && other.info.canUnlock === this.info.canUnlock && other.info.label === this.info.label; }
+        eq(other) { return other.name === this.name && other.info.canUnlock === this.info.canUnlock && other.info.label === this.info.label && other.info.text === this.info.text; }
         toDOM() {
             const t = editor.t;
             return h('div', { class: 'rze-lockbar' },
                 icon('lock'),
-                h('span', { text: t('lockedFrom', { host: this.info.label || '' }) }),
+                h('span', { text: this.info.text || t('lockedFrom', { host: this.info.label || '' }) }),
                 h('span', { class: 'rze-toolbar-fill' }),
                 this.info.url ? h('a', { href: this.info.url, target: '_blank', rel: 'noopener', text: t('open') }) : '',
                 this.info.canUnlock
-                    ? h('button', { type: 'button', class: 'rze-btn rze-lockbar-unlock', title: t('unlockHint'), onclick: () => editor.unlockRule(this.name) }, icon('unlock'), h('span', { text: t('unlock') }))
+                    ? h('button', { type: 'button', class: 'rze-btn rze-lockbar-unlock', title: this.info.hint || t('unlockHint'), onclick: () => editor.unlockRule(this.name) }, icon('unlock'), h('span', { text: t('unlock') }))
                     : h('span', { class: 'rze-lockbar-ro', text: t('lockedReadOnly') }));
         }
         ignoreEvent() { return true; }
@@ -1817,7 +1888,7 @@ function ruleLocks(editor) {
         });
         if (!blocked) return tr;
         const info = editor._locks.get(blocked.name);
-        queueMicrotask(() => editor._toast(editor.t(info && info.canUnlock ? 'lockedUnlockFirst' : 'lockedNoRight', { name: blocked.name })));
+        queueMicrotask(() => editor._toast(editor.t(info && info.canUnlock ? 'lockedUnlockFirst' : 'lockedNoRight', { name: blocked.name }), 'warning'));
         return [];
     });
 

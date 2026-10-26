@@ -106,3 +106,40 @@ test('tags: header tags and meta tags are read; the title starts as the rule nam
     const s = initialState([TAGS, TITLE], e, false, 'r');
     assert.equal(s.values.title, 'r');
 });
+
+test('a title field is compared with the rule name', async () => {
+    const { fieldStatus } = await import('../src/core/fields.js');
+    const TITLE = { id: 'title', type: 'text', fromRuleName: true };
+    const s = { values: { title: 'PK_Gmail_canada' }, report: {}, keep: {} };
+    assert.equal(fieldStatus(TITLE, s, null, 'PK_Gmail_canada'), 'named');
+    s.values.title = 'Gmail phishing kit (Canada)';
+    assert.equal(fieldStatus(TITLE, s, null, 'PK_Gmail_canada'), 'renamed');
+});
+
+test('a pasted rule: no field is written into it by default; a rule built from the panel: they are', () => {
+    const VERSION = { id: 'version', type: 'version', meta: { key: 'version' } };
+    const TAGS = { id: 'tags', type: 'list', report: false, meta: { key: 'tags' } };
+    const pasted = initialState([VERSION, TAGS], [{ key: 'version', value: '2.1' }], false, 'r');
+    assert.deepEqual(pasted.report, { version: false, tags: false });
+    assert.equal(pasted.values.version, '2.1');
+    const built = initialState([VERSION, TAGS], [], true, null);
+    assert.deepEqual(built.report, { version: true, tags: false });
+});
+
+test('licence: British spelling and any case find the option of the list', () => {
+    const LIC = { id: 'license', type: 'select', options: [{ value: 'AGPL-3.0' }, { value: 'MIT' }], meta: { key: 'license', aliases: ['licence'] } };
+    assert.equal(readField(LIC, [{ key: 'licence', value: 'agpl-3.0' }]), 'AGPL-3.0');
+    assert.equal(readField(LIC, [{ key: 'license', value: 'My own licence' }]), 'My own licence');
+});
+
+test('conditions split on their top-level and / or, and join back', () => {
+    const { splitCondition, joinCondition } = yara.body;
+    const c = '$mz at 0 and (any of ($s*) or #a > 2) or pe.imports("kernel32.dll", "and or") and $b matches /x and y/';
+    const parts = splitCondition(c);
+    assert.deepEqual(parts.map(p => [p.op, p.text]), [
+        [null, '$mz at 0'], ['and', '(any of ($s*) or #a > 2)'], ['or', 'pe.imports("kernel32.dll", "and or")'], ['and', '$b matches /x and y/'],
+    ]);
+    assert.equal(joinCondition(parts), c);
+    assert.equal(joinCondition([{ op: null, text: 'a' }, { op: 'or', text: ' b ' }, { op: 'and', text: '' }]), 'a or b');
+    assert.deepEqual(splitCondition('candy and orange'), [{ op: null, text: 'candy' }, { op: 'and', text: 'orange' }]);
+});
