@@ -42,6 +42,9 @@ export function renderTests(el, state, cb) {
     const prevSearch = el.querySelector('.rze-tests-search input');
     const searchFocused = prevSearch && document.activeElement === prevSearch;
     const caret = searchFocused ? [prevSearch.selectionStart, prevSearch.selectionEnd] : null;
+    const prevSetsSearch = el.querySelector('[data-sets-search]');
+    const setsCaret = prevSetsSearch && document.activeElement === prevSetsSearch
+        ? [prevSetsSearch.selectionStart, prevSetsSearch.selectionEnd] : null;
 
     const head = h('div', { class: 'rze-panel-head rze-tests-head' },
         h('strong', { class: 'rze-tests-title' }, icon('play'), t('tests')),
@@ -58,17 +61,7 @@ export function renderTests(el, state, cb) {
     // ── sets to run on ──
     if (state.loading) body.appendChild(h('div', { class: 'rze-empty', text: t('tLoading') }));
     else if (!state.sets || !state.sets.length) body.appendChild(h('div', { class: 'rze-empty', text: state.error || t('tNoSets') }));
-    else {
-        body.appendChild(h('div', { class: 'rze-tests-sets', role: 'group', 'aria-label': t('tSets') },
-            h('span', { class: 'rze-tests-caption', text: t('tSets') }),
-            ...state.sets.map(set => h('label', {
-                class: `rze-tests-set${state.chosen.has(set.id) ? ' rze-on' : ''}`, title: set.description || '',
-            },
-                h('input', { type: 'checkbox', checked: state.chosen.has(set.id), disabled: busy, onchange: e => cb.onToggleSet(set.id, e.target.checked) }),
-                h('span', { class: 'rze-tests-set-name', text: set.name }),
-                kindBadge(set.kind, t),
-                h('span', { class: 'rze-tests-count', text: String(set.count) })))));
-    }
+    else body.appendChild(renderSets(state, cb, busy));
 
     if (state.error && state.sets && state.sets.length) body.appendChild(note('error', state.error));
     if (run && run.error) body.appendChild(note('error', run.error));
@@ -131,6 +124,11 @@ export function renderTests(el, state, cb) {
         searchInput.focus();
         searchInput.setSelectionRange(caret[0], caret[1]);
     }
+    const setsSearch = setsCaret && el.querySelector('[data-sets-search]');
+    if (setsSearch) {
+        setsSearch.focus();
+        setsSearch.setSelectionRange(setsCaret[0], setsCaret[1]);
+    }
 }
 
 function summary(run, t) {
@@ -146,6 +144,76 @@ function summary(run, t) {
         h('span', { class: 'rze-tests-progress-text', text: `${s.done} / ${s.total}` }),
         h('span', { class: 'rze-tests-mini rze-tests-mini-wide' },
             h('span', { style: { width: `${s.total ? Math.round((s.done / s.total) * 100) : 0}%` } })));
+}
+
+// sample sets, grouped by what they prove: malicious first (detections), then benign (false
+// positives), then crafted test files; sets of a kind the tester does not know go last
+const KIND_ORDER = ['malicious', 'benign', 'synthetic'];
+const KIND_HINT = { malicious: 'tKindMaliciousHint', benign: 'tKindBenignHint', synthetic: 'tKindSyntheticHint' };
+
+function renderSets(state, cb, busy) {
+    const { t } = cb;
+    const sets = state.sets;
+    const chosen = sets.filter(s => state.chosen.has(s.id));
+    const samples = chosen.reduce((n, s) => n + (s.count || 0), 0);
+    const open = state.setsOpen !== false;
+    const query = (state.setsQuery || '').trim().toLowerCase();
+
+    const head = h('div', { class: 'rze-sets-head' },
+        h('button', {
+            type: 'button', class: 'rze-sets-toggle', 'aria-expanded': String(open),
+            onclick: () => cb.onSetsOpen(!open),
+        }, h('span', { class: `rze-sets-chevron${open ? ' rze-open' : ''}`, text: '▸' }),
+            h('span', { class: 'rze-tests-caption', text: t('tSets') }),
+            h('span', { class: 'rze-sets-summary', text: t('tSetsSummary', { n: chosen.length, total: sets.length, samples }) })),
+        h('span', { class: 'rze-toolbar-fill' }),
+        open ? h('button', { type: 'button', class: 'rze-link-btn', disabled: busy, onclick: () => cb.onToggleSets(sets.map(x => x.id), true), text: t('tSelectAll') }) : '',
+        open ? h('button', { type: 'button', class: 'rze-link-btn', disabled: busy, onclick: () => cb.onToggleSets(sets.map(x => x.id), false), text: t('tSelectNone') }) : '');
+    if (!open) return h('div', { class: 'rze-sets rze-sets-closed', role: 'group', 'aria-label': t('tSets') }, head);
+
+    const wrap = h('div', { class: 'rze-sets', role: 'group', 'aria-label': t('tSets') }, head);
+    if (sets.length > 6) {
+        wrap.appendChild(h('label', { class: 'rze-sets-search' }, icon('search'),
+            h('input', { type: 'search', value: state.setsQuery || '', placeholder: t('tSetsSearch'), 'data-sets-search': '1',
+                         oninput: e => cb.onSetsQuery(e.target.value) })));
+    }
+    const kinds = [...KIND_ORDER, ...new Set(sets.map(x => x.kind).filter(k => !KIND_ORDER.includes(k)))];
+    for (const kind of kinds) {
+        const all = sets.filter(x => x.kind === kind);
+        const shown = all.filter(x => !query || [x.name, x.description, x.source, ...Object.entries(x.labels || {}).flat()]
+            .some(v => String(v || '').toLowerCase().includes(query)));
+        if (!shown.length) continue;
+        const on = all.filter(x => state.chosen.has(x.id)).length;
+        const box = h('input', { type: 'checkbox', checked: on === all.length, disabled: busy,
+                                 onchange: e => cb.onToggleSets(all.map(x => x.id), e.target.checked) });
+        box.indeterminate = on > 0 && on < all.length;
+        wrap.appendChild(h('div', { class: `rze-sets-group rze-group-${kind}` },
+            h('label', { class: 'rze-sets-group-head' }, box, kindBadge(kind, t),
+                h('span', { class: 'rze-sets-group-hint', text: KIND_HINT[kind] ? t(KIND_HINT[kind]) : '' }),
+                h('span', { class: 'rze-toolbar-fill' }),
+                h('span', { class: 'rze-tests-muted', text: t('tSetsChosen', { n: on, total: all.length }) })),
+            ...shown.map(set => setRow(set, state, cb, busy))));
+    }
+    return wrap;
+}
+
+function setRow(set, state, cb, busy) {
+    const { t } = cb;
+    const on = state.chosen.has(set.id);
+    const labels = Object.entries(set.labels || {});
+    return h('label', { class: `rze-set${on ? ' rze-on' : ''}`, title: set.description || '' },
+        h('input', { type: 'checkbox', checked: on, disabled: busy, onchange: e => cb.onToggleSet(set.id, e.target.checked) }),
+        h('span', { class: 'rze-set-main' },
+            h('span', { class: 'rze-set-name', text: set.name }),
+            set.description ? h('span', { class: 'rze-set-desc', text: set.description }) : '',
+            (labels.length || set.source || set.encrypted || (set.tlp && set.tlp !== 'clear'))
+                ? h('span', { class: 'rze-set-meta' },
+                    ...labels.map(([k, v]) => h('span', { class: 'rze-set-chip', text: `${k}: ${v}` })),
+                    set.encrypted ? h('span', { class: 'rze-set-chip rze-set-chip-lock' }, icon('lock'), h('span', { text: t('tEncrypted') })) : '',
+                    set.tlp && set.tlp !== 'clear' ? h('span', { class: 'rze-set-chip', text: `TLP:${set.tlp.toUpperCase()}` }) : '',
+                    set.source ? h('span', { class: 'rze-set-source', text: set.source }) : '')
+                : ''),
+        h('span', { class: 'rze-set-count' }, h('b', { text: String(set.count ?? 0) }), h('span', { text: t('tSamplesWord') })));
 }
 
 function kindBadge(kind, t) {

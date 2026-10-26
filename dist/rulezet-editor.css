@@ -430,6 +430,38 @@ textarea.rze-field-input { resize: vertical; font-family: inherit; }
 .rze-tests-set input { margin: 0; accent-color: var(--rze-accent); }
 .rze-tests-set-name { font-weight: 600; }
 .rze-tests-count { color: var(--rze-muted); }
+/* sample sets: grouped by kind, one row per set with its details */
+.rze-sets { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--rze-border); border-radius: 8px; padding: 8px 10px 10px; background: var(--rze-panel-bg); }
+.rze-sets-closed { padding-bottom: 8px; }
+.rze-sets-head { display: flex; align-items: center; gap: 8px; }
+.rze-sets-toggle { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.rze-sets-chevron { display: inline-block; font-size: 10px; color: var(--rze-muted); transition: transform .15s; }
+.rze-sets-chevron.rze-open { transform: rotate(90deg); }
+.rze-sets-summary { font-size: 12px; color: var(--rze-muted); }
+.rze-link-btn { border: 0; background: none; padding: 0 2px; font: inherit; font-size: 12px; color: var(--rze-accent); cursor: pointer; }
+.rze-link-btn:disabled { opacity: .5; cursor: default; }
+.rze-sets-search { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px; border: 1px solid var(--rze-border); border-radius: 7px; background: var(--rze-bg); color: var(--rze-muted); }
+.rze-sets-search:focus-within { border-color: var(--rze-accent); }
+.rze-sets-search input { flex: 1; min-width: 0; border: 0; outline: none; background: none; color: var(--rze-fg); font: inherit; font-size: 12px; }
+.rze-sets-group { display: flex; flex-direction: column; border: 1px solid var(--rze-border); border-radius: 7px; overflow: hidden; background: var(--rze-bg); }
+.rze-sets-group-head { display: flex; align-items: center; gap: 8px; margin: 0; padding: 5px 10px; font-size: 12px; cursor: pointer; background: var(--rze-active-line); border-bottom: 1px solid var(--rze-border); }
+.rze-sets-group-head input, .rze-set input { margin: 0; accent-color: var(--rze-accent); flex-shrink: 0; }
+.rze-sets-group-hint { color: var(--rze-muted); }
+.rze-set { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 10px; margin: 0; padding: 7px 10px; cursor: pointer; border-left: 3px solid transparent; }
+.rze-set + .rze-set { border-top: 1px solid color-mix(in srgb, var(--rze-border) 70%, transparent); }
+.rze-set:hover { background: var(--rze-active-line); }
+.rze-set.rze-on { border-left-color: var(--rze-accent); }
+.rze-set input { margin-top: 3px; }
+.rze-set-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rze-set-name { font-size: 12.5px; font-weight: 600; }
+.rze-set-desc { font-size: 11.5px; color: var(--rze-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rze-set-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 2px; }
+.rze-set-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; border-radius: 999px; font-size: 10.5px; border: 1px solid var(--rze-border); color: var(--rze-muted); }
+.rze-set-chip-lock { color: var(--rze-error); border-color: color-mix(in srgb, var(--rze-error) 35%, var(--rze-border)); }
+.rze-set-chip .rze-icon svg { width: 10px; height: 10px; }
+.rze-set-source { font-size: 10.5px; color: var(--rze-muted); font-style: italic; }
+.rze-set-count { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; font-size: 10.5px; color: var(--rze-muted); }
+.rze-set-count b { font-size: 13px; color: var(--rze-fg); }
 .rze-tests-kind { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border-radius: 4px; color: var(--rze-muted); background: var(--rze-active-line); }
 .rze-tests-kind.rze-kind-benign { color: var(--rze-ok); background: color-mix(in srgb, var(--rze-ok) 12%, transparent); }
 .rze-tests-kind.rze-kind-malicious { color: var(--rze-error); background: color-mix(in srgb, var(--rze-error) 12%, transparent); }

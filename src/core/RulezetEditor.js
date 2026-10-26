@@ -424,6 +424,7 @@ export class RulezetEditor {
         if (!text.trim()) { T.error = this.t('tNothing'); this._renderTests(); return null; }
         T.starting = true;
         T.error = null;
+        T.setsOpen = false;            // the results matter now: the chosen sets fold away (summary kept)
         this._renderTests();
         try {
             const run = await this.host.startTest(this.pack.validateAs || this.pack.id, text, [...T.chosen]);
@@ -1665,8 +1666,12 @@ export class RulezetEditor {
     }
 
     _toggleTestSet(id, on) {
+        this._toggleTestSets([id], on);
+    }
+
+    _toggleTestSets(ids, on) {
         const T = this._test;
-        if (on) T.chosen.add(id); else T.chosen.delete(id);
+        for (const id of ids) { if (on) T.chosen.add(id); else T.chosen.delete(id); }
         try { window.localStorage.setItem(this._testSetsKey(), JSON.stringify([...T.chosen])); } catch { /* storage blocked */ }
         this._renderTests();
     }
@@ -1734,6 +1739,9 @@ export class RulezetEditor {
             t: this.t,
             profile: this.pack.test,
             onToggleSet: (id, on) => this._toggleTestSet(id, on),
+            onToggleSets: (ids, on) => this._toggleTestSets(ids, on),
+            onSetsOpen: (open) => { this._test.setsOpen = open; this._renderTests(); },
+            onSetsQuery: (q) => { this._test.setsQuery = q; this._renderTests(); },
             onToggleSample: (id) => {
                 const T = this._test;
                 if (T.expanded.has(id)) {
