@@ -548,6 +548,11 @@ export class RulezetEditor {
             this.options.statusBar ? this.statusEl : '',
             this.toastEl,
         );
+        // the editor may sit inside a host <form> (Rulezet's edit page): Enter in one of its own
+        // fields (search, test search, rename, filters) must never submit that form
+        this.root.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault();
+        });
         this.palette = new CommandPalette(this.root, t);
         element.appendChild(this.root);
         this._renderToolbar();
