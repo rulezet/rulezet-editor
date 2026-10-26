@@ -26,8 +26,8 @@ database, rule tools and drafts.
 - Create (background job `editor_yara_import`, `app/features/editor/editor_jobs.py`):
   `POST /editor-api/yara/jobs` (same body) -> 202 `{ uuid, steps }`, then
   `GET /editor-api/yara/jobs/<uuid>` (creator or admin only) -> `{ status, steps, ok, rules,
-  result_url }`. Steps: already in Rulezet, syntax (with dependencies), samples (not yet:
-  `skipped`), create. Creation only when the checks pass; otherwise `ok: false`, nothing created.
+  result_url }`. Steps: already in Rulezet, syntax (with dependencies), samples (setting
+  `editor.test_on_create`, see testing.md: `ok`, `warning` on false positives, `skipped`), create. Creation only when the checks pass; otherwise `ok: false`, nothing created.
 - UI flow: Create -> quick plan -> modal listing each rule with what will happen (updates
   highlighted) -> "Yes, check and import" -> the steps live (editor read-only) -> created / updated /
   proposed rules (clickable) + summary page, or "Fix the errors". Old flow kept for reference:
@@ -43,7 +43,8 @@ database, rule tools and drafts.
 - `app/features/editor/editor_core.py`: `plan_yara`, `import_yara`. A rule "exists" when an
   active rule has the same meta id, the same content or the same YARA name: it is reused for the
   links, never created again. Each rule keeps only the imports it uses.
-- Samples (later): a step of the job, using `rule_tester` drivers; see `editor_jobs.STEPS`.
+- Samples: `_test_on_samples` in `editor_jobs.py` (document built by `editor_core.test_document`),
+  results kept per rule version (`sample_test_core.record_rule_results`).
 - `app/features/editor/editor.py`: `editor_page_blueprint` (`/editor`), result page
   `app/templates/editor/import_result.html` (`import_result()` in `editor_core.py`).
 - `app/static/js/rule/YaraEditorPanel.js`, used in `app/templates/rule/rule.html`

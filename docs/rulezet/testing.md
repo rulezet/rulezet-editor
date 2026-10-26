@@ -45,9 +45,28 @@ driver per format, a bubblewrap sandbox, sample sets in folders. The editor only
   files: `rulezet-tester benign-set /srv/rulezet/samples/benign-linux`, then
   `RULE_TESTS_SAMPLES=/srv/rulezet/samples`. **No real malware on the web server**:
   that waits for a sandbox on a separate machine (`Sandbox(command=...)`).
-- Runs are kept in memory (one gunicorn worker): a worker restart drops runs in progress. A
-  database registry comes with the Lab.
-- Later: "test on Create" (the `samples` step of `editor_jobs`), results stored per rule version.
+- Runs are kept in Rulezet's database (`DbRunRegistry`, table `sample_test_run`,
+  `app/features/rule_tester/sample_test_core.py`): every gunicorn worker and the job worker see
+  the same runs, and they survive a restart.
+- "Test on Create": the `samples` step of `editor_jobs` runs the whole document (rules needed from
+  Rulezet included) on the sets chosen by the setting `editor.test_on_create` (`kinds`, benign by
+  default). False positives are a warning (red step) unless `block_on_false_positives`; nothing is tested
+  when every rule of the document is already in Rulezet. Each
+  rule written keeps its own share of the run (`rule_sample_result`, per version = sha256 of its
+  text): the rule page shows "N samples · X FP" while the text is unchanged.
+
+- Who does what: **rulezet-tester** runs everything (drivers, bubblewrap sandbox, sample sets,
+  run states, the lab VM); Rulezet only stores (registry, per-rule results), decides when to run
+  (Test button, Create step) and shows the results. Nothing about execution lives in Rulezet.
+- Rule page: badge "N samples · X FP" (current version) and a **Samples** tab
+  (`/rule/detail_rule/<id>/samples`, `detail_rule_samples.html`, `css/rule/base/detail_rule_samples.css`,
+  data from `sample_test_core.rule_sample_details`): verdict, counts, per-set table; "Strings of
+  the rule" (sticky, collapsible) = the rule with, next to each string, what it matched in the
+  opened sample, and per string the samples it matched / detections / false positives (a string
+  that never matched says so); the samples (false positives first, filters, search, 25 per page,
+  one open at a time) with every match grouped by string, offset, length and the bytes around it;
+  the history of every test of the rule. Sample contents never leave the tester: hashes, labels,
+  offsets and at most 64 bytes + 32 bytes of context per hit.
 
 ## Standalone
 

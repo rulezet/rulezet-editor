@@ -13,7 +13,7 @@ its file exists here.
 | YARA editor tab (create page) | [create-page.md](create-page.md) | `YaraEditorPanel.js`, saves through `rule.parse_rule` | — |
 | Workspace (folders, files) and bundles — **paused**, removed from Rulezet's `editor` branch for now | [workspace.md](workspace.md) | (was `/editor`, `editor_bundle.py`, bundle job step) | — |
 | Fields panel (title, CVE, tags… in the rule or not) | [fields.md](fields.md) | `editor_core.fields` / `suggest` / `apply_fields`, setting `editor.rule_fields` | — |
-| Tests on samples (Test panel) | [testing.md](testing.md) | `editor_core.tests` (rulezet-tester), `RULE_TESTS_*` | `serve` + rulezet-tester |
+| Tests on samples (Test panel, Create step, Samples tab of the rule page) | [testing.md](testing.md) | `editor_core.tests` (rulezet-tester), `sample_test_core`, `RULE_TESTS_*`, setting `editor.test_on_create` | `serve` + rulezet-tester |
 | Rule tools, new-rule template | [rule-tools.md](rule-tools.md) | `author` = logged-in user; `meta: id` read as `original_uuid` | — |
 
 Rulezet side (branch `editor` of rulezet-core):
