@@ -1,7 +1,7 @@
 [project]
 name = "rulezet-editor"
 version = "0.1.0"
-description = "Server side of rulezet-editor: rule validation and rule lookup, no database"
+description = "Server side of rulezet-editor: rule validation, rule lookup, tests (rulezet-tester); no database"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -10,6 +10,7 @@ dependencies = ["flask>=2.3"]
 
 [project.optional-dependencies]
 yara = ["yara-python>=4.3"]
+test = ["rulezet-tester @ git+https://github.com/rulezet/rulezet-tester.git"]
 dev = ["pytest>=7", "yara-python>=4.3"]
 
 [project.scripts]

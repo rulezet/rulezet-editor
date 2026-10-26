@@ -10,7 +10,7 @@ It is built for [Rulezet](https://github.com/ngsoti/rulezet-core) but is not tie
 editor runs in any web page, in MISP, in an internal SOC tool or in a VS Code webview.
 
 > Status: 0.1.0, first working version with the YARA language pack.
-> Architecture: [docs/design.md](docs/design.md).
+> Architecture: [docs/design.md](docs/design.md). How it works inside, step by step: [docs/how-it-works.md](docs/how-it-works.md).
 
 ## Try it
 
@@ -90,6 +90,9 @@ Host application  ->  RulezetEditor (core)  <->  Host adapter (optional: validat
 - A host adapter only does network calls; a missing method hides the matching feature:
   [docs/host-adapter.md](docs/host-adapter.md).
 - The engine is CodeMirror 6; no engine type leaks into the pack interface.
+- Tests on samples come from [rulezet-tester](https://github.com/rulezet/rulezet-tester) (sandboxed runs,
+  one driver per format): `create_blueprint(backend, tests=TestService(...))` mounts its API on
+  `/editor-api/test`. Without it, no Test button.
 
 ```
 src/core/        editor class, registry, theme, events, i18n

@@ -1,5 +1,6 @@
 """
-Server side of rulezet-editor. No database.
+Server side of rulezet-editor: validation, rule lookup; tests on samples
+through rulezet-tester when it is installed. No database.
 
 Standalone:   rulezet-editor serve            (or create_app())
 Inside Rulezet (submodule):

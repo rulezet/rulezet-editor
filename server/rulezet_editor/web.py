@@ -7,6 +7,11 @@ HTTP layer: a Flask blueprint the browser editor talks to (EditorServerHost on t
     GET  /                                         -> { name, formats, features }
     GET  /assets/<file>                            -> dist/ (editor JS and CSS)
 
+    Tests on samples, only with `tests=` (a rulezet-tester TestService), mounted on /test:
+    GET  /test/sets?format=                        -> { available, sets: [...] }
+    POST /test/         { format, text, sets }     -> 202 run (samples pending)
+    GET  /test/<run id>                            -> run (poll until status is done | failed)
+
 Inside Rulezet the blueprint is mounted with a FunctionBackend; standalone, create_app()
 mounts it with a LocalBackend + RulezetApiBackend chain.
 """
@@ -21,7 +26,10 @@ DIST = ROOT / 'dist'
 MAX_CONTENT = 512 * 1024
 
 
-def create_blueprint(backend, name='rulezet_editor', max_content=MAX_CONTENT, assets=True):
+def create_blueprint(backend, name='rulezet_editor', max_content=MAX_CONTENT, assets=True,
+                     tests=None, test_owner=None):
+    """tests: a rulezet_tester.TestService, or None (no Test button). test_owner(): who is asking
+    (the host's user id), so a run is only visible to the one who started it."""
     bp = Blueprint(name, __name__)
 
     def error(message, status):
@@ -32,8 +40,12 @@ def create_blueprint(backend, name='rulezet_editor', max_content=MAX_CONTENT, as
         return jsonify({
             'name': backend.name,
             'formats': backend.formats(),
-            'features': {'validate': True, 'rules': True},
+            'features': {'validate': True, 'rules': True, 'test': bool(tests and tests.formats())},
         })
+
+    if tests is not None:
+        from rulezet_tester.web import create_blueprint as tester_blueprint
+        bp.register_blueprint(tester_blueprint(tests, owner=test_owner, name=f'{name}_test'), url_prefix='/test')
 
     @bp.post('/validate')
     def validate():
@@ -83,13 +95,25 @@ def create_blueprint(backend, name='rulezet_editor', max_content=MAX_CONTENT, as
     return bp
 
 
-def create_app(backend=None, rulezet_url='https://rulezet.org', api_key=None, prefix='/editor-api'):
-    """Standalone server: editor API + the playground. No database."""
+def create_app(backend=None, rulezet_url='https://rulezet.org', api_key=None, prefix='/editor-api',
+               samples=(), sandbox='bwrap'):
+    """Standalone server: editor API + the playground. No database.
+    Tests (when rulezet-tester is installed): samples = extra sample folders besides the safe sets
+    shipped with rulezet-tester; sandbox = 'bwrap' (default), 'process' (development) or None."""
     if backend is None:
         remote = RulezetApiBackend(rulezet_url, api_key=api_key) if rulezet_url else None
         backend = ChainBackend(LocalBackend(), remote, name=remote.name if remote else 'local')
+    tests = None
+    if sandbox:
+        try:
+            from rulezet_tester import FolderSampleStore, Sandbox, TestService
+            from rulezet_tester.web import SAMPLES
+            tests = TestService(FolderSampleStore(SAMPLES, *samples), Sandbox(mode=sandbox))
+        except ImportError:
+            tests = None
     app = Flask(__name__, static_folder=None)
-    app.register_blueprint(create_blueprint(backend), url_prefix=prefix)
+    app.register_blueprint(create_blueprint(backend, tests=tests), url_prefix=prefix)
+    app.config['EDITOR_TESTS'] = tests
     app.config['EDITOR_BACKEND'] = backend
 
     @app.get('/')

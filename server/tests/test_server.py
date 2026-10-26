@@ -150,3 +150,24 @@ def test_standalone_app_serves_playground_and_api():
     assert c.get('/').status_code == 200
     assert c.get('/editor-api/').json['name'] == 'local'
     assert c.post('/editor-api/validate', json={'format': 'yara', 'content': VALID}).json['valid'] is True
+
+
+def test_tests_are_mounted_from_rulezet_tester():
+    tester = pytest.importorskip('rulezet_tester')
+    from rulezet_tester.web import SAMPLES
+    service = tester.TestService(tester.FolderSampleStore(SAMPLES), tester.Sandbox(mode='process'), executor=lambda fn: fn())
+    app = Flask(__name__)
+    app.register_blueprint(create_blueprint(FunctionBackend(), tests=service, test_owner=lambda: 1), url_prefix='/editor-api')
+    c = app.test_client()
+    assert c.get('/editor-api/').json['features']['test'] is True
+    run = c.post('/editor-api/test/', json={'format': 'yara', 'text': 'rule a { strings: $g = "GNU" condition: $g }', 'sets': ['benign-text']})
+    assert run.status_code == 202
+    assert c.get(f"/editor-api/test/{run.json['id']}").json['summary']['false_positives'] == 1
+
+
+def test_no_tests_without_a_service():
+    app = Flask(__name__)
+    app.register_blueprint(create_blueprint(FunctionBackend()), url_prefix='/editor-api')
+    c = app.test_client()
+    assert c.get('/editor-api/').json['features']['test'] is False
+    assert c.get('/editor-api/test/sets?format=yara').status_code == 404
