@@ -24,6 +24,11 @@ class MyHost extends HostAdapter {
   // One rule by exact name: hover, "exists on ..." diagnostics, insert action, Ctrl+Click.
   async getRule(language, name) { return null; }
 
+  // Tests on samples (rulezet-tester behind the host): the Test panel.
+  async testSets(language) { return { available: true, sets: [] }; }
+  async startTest(language, text, sets) { return run; }      // every sample pending
+  async testState(runId) { return run; }                     // poll until done | failed
+
   // Drafts (default: the browser's localStorage).
   async loadDraft(key) { return { text, savedAt }; }
   async saveDraft(key, text) {}           // text === null removes the draft
@@ -46,6 +51,7 @@ new EditorServerHost({ baseUrl: '/editor-api', csrfToken, name: 'Rulezet', forma
 | `validate` | `POST /validate` `{ format, content }` -> `{ valid, items }` |
 | `searchRules` | `GET /rules?format=&q=&limit=` -> `{ results }` |
 | `getRule` | `GET /rules/<name>?format=` -> rule or 404 |
+| `testSets` / `startTest` / `testState` | `GET /test/sets`, `POST /test/`, `GET /test/<id>` (rulezet-tester) |
 
 Server side, a `Backend` answers each call (`None` = not available, `BackendError` = failed):
 `FunctionBackend` (host functions, Rulezet), `LocalBackend` (local compilers),

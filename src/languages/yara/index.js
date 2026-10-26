@@ -78,6 +78,23 @@ export default {
         }));
     },
 
+    /** Tests on samples (rulezet-tester): how a hit reads and where it points in the rule. */
+    test: {
+        sampleKind: 'file',
+        hitLabel(hit) {
+            const w = hit.where || {};
+            if (w.kind === 'offset') return `${hit.item} at 0x${w.offset.toString(16)}${w.length ? ` (${w.length} B)` : ''}`;
+            return hit.item || 'condition';
+        },
+        /** Range of the matched string (or of the rule) in the document. */
+        locate(model, hit) {
+            const rule = model.rules.find(r => r.name === hit.rule);
+            if (!rule) return null;
+            const s = hit.item && rule.strings.find(x => x.id === hit.item);
+            return s ? { from: s.idFrom, to: s.idTo } : { from: rule.from, to: rule.from };
+        },
+    },
+
     /** Rules a rule needs that are not in the document (for host lookup). */
     dependencies(model) {
         const local = new Set(model.rules.map(r => r.name));

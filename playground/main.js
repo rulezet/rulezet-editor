@@ -36,6 +36,7 @@ function create(value) {
     editor.on('format', r => log('format', `${r.formatted} formatted, ${r.skipped.length} skipped`));
     editor.on('save', v => log('save', `${v.length} chars (Ctrl+S)`));
     editor.on('language', l => log('language', l));
+    editor.on('test', r => log('test', `${r.status}: ${r.summary.done}/${r.summary.total}, ${r.summary.false_positives} false positive(s)`));
     window.editor = editor;
 }
 

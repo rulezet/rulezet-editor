@@ -12,6 +12,7 @@ its file exists here.
 | Rule lookup (completion, hover, external rules) | [rule-lookup.md](rule-lookup.md) | query on `Rule` via `_active()` | `GET /api/rule/public/searchPage` |
 | YARA editor tab (create page) | [create-page.md](create-page.md) | `YaraEditorPanel.js`, saves through `rule.parse_rule` | — |
 | Workspace (folders, files) and bundles — **paused**, removed from Rulezet's `editor` branch for now | [workspace.md](workspace.md) | (was `/editor`, `editor_bundle.py`, bundle job step) | — |
+| Tests on samples (Test panel) | [testing.md](testing.md) | `editor_core.tests` (rulezet-tester), `RULE_TESTS_*` | `serve` + rulezet-tester |
 | Rule tools, new-rule template | [rule-tools.md](rule-tools.md) | `author` = logged-in user; `meta: id` read as `original_uuid` | — |
 
 Rulezet side (branch `editor` of rulezet-core):

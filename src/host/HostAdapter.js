@@ -9,6 +9,11 @@
  *   searchRules(language, query)    -> [{ name, description?, author?, url?, content? }]
  *   getRule(language, name)         -> { name, description?, author?, url?, content? } | null
  *   loadDraft(key) / saveDraft(key, text)
+ *
+ *   Tests on samples (rulezet-tester behind the host; see docs/testing.md):
+ *   testSets(language)              -> { available, sets: [{ id, name, kind, count, description, labels }] }
+ *   startTest(language, text, sets) -> run (every sample pending)
+ *   testState(runId)                -> run; poll until status is done | failed
  */
 export class HostAdapter {
     constructor() {

@@ -35,6 +35,7 @@ import plain from '../languages/plain/index.js';
 import { h, icon } from '../ui/dom.js';
 import { renderOutline } from '../ui/outline.js';
 import { renderProblems } from '../ui/problems.js';
+import { renderTests } from '../ui/tests.js';
 import { CommandPalette } from '../ui/palette.js';
 
 registerLanguage(plain);
@@ -60,6 +61,8 @@ const DEFAULTS = {
     author: null,
     buttons: [],                 // host page buttons in the toolbar: [{ id, label, icon?, title?, primary?, disabled?(), run(editor) }]                // default author for authoring actions (e.g. the logged-in user)
     lineWrapping: null,          // null: last choice of this viewer (default off)
+    tests: 'auto',               // Test panel: 'auto' = when the pack has `test` and the host has startTest; false = never
+    testPollMs: 700,             // how often a running test is polled
     placeholder: '',
 };
 
@@ -72,6 +75,7 @@ const COMPLETION_TYPES = {
 const renameEffect = StateEffect.define();
 const locksChanged = StateEffect.define();
 const refreshLint = StateEffect.define();
+const setTestMarks = StateEffect.define();      // [{ from, to, active }] or [] : strings a test sample matched
 
 export class RulezetEditor {
     static registerLanguage(pack) { return registerLanguage(pack); }
@@ -95,6 +99,7 @@ export class RulezetEditor {
         this._activeDoc = 'main';
         this._serverState = this._serverEnabled() ? 'idle' : 'off';
         this._externals = new Map();
+        this._test = { open: false, sets: null, chosen: new Set(), expanded: new Set(), focus: null, query: '', filter: 'all', limits: {}, run: null, error: null, loading: false, starting: false, text: null, stale: false };
         this._timers = {};
         this._destroyed = false;
 
@@ -136,6 +141,10 @@ export class RulezetEditor {
         this.pack = this._resolvePack(id, this.getValue());
         this._server = { text: null, items: [], error: null };
         this._externals.clear();
+        clearTimeout(this._timers.test);
+        this._test = { ...this._test, sets: null, chosen: new Set(), run: null, error: null, stale: false };
+        if (!this._testsEnabled()) this.toggleTests(false);
+        else if (this._test.open) this._test.loadPromise = this._loadTestSets();
         this.view.dispatch({ effects: this.languageConf.reconfigure(this._languageExtensions()) });
         this._relint();
         this._renderStatus();
@@ -370,6 +379,51 @@ export class RulezetEditor {
 
     toggleOutline(force) { this._setOutlineOpen(force ?? !this._outlineOpen); }
     toggleProblems(force) { this._setProblemsOpen(force ?? !this._problemsOpen); }
+
+    // ── tests on samples (host: rulezet-tester) ──
+
+    /** Open / close the Test panel; the sample sets are loaded the first time. */
+    toggleTests(force) {
+        const open = !!(force ?? !this._test.open) && this._testsEnabled();
+        this._test.open = open;
+        this.testsEl.hidden = !open;
+        if (!open) this._markTestHits([]);
+        if (open && !this._test.sets && !this._test.loading) this._test.loadPromise = this._loadTestSets();
+        this._renderTests();
+        this._renderToolbar();
+    }
+
+    /** Run the whole document on the chosen sample sets; results arrive sample by sample. */
+    async runTest() {
+        if (!this._testsEnabled()) return null;
+        if (!this._test.open) this.toggleTests(true);
+        if (this._test.loading) await this._test.loadPromise;          // opened just now: sets on their way
+        if (!this._test.sets) await this._loadTestSets();
+        const T = this._test;
+        if (T.starting || (T.run && ['queued', 'running'].includes(T.run.status))) return null;
+        if (!T.chosen.size) { T.error = this.t('tChooseSet'); this._renderTests(); return null; }
+        const text = this.getValue();
+        if (!text.trim()) { T.error = this.t('tNothing'); this._renderTests(); return null; }
+        T.starting = true;
+        T.error = null;
+        this._renderTests();
+        try {
+            const run = await this.host.startTest(this.pack.validateAs || this.pack.id, text, [...T.chosen]);
+            Object.assign(T, { run, text, stale: false, expanded: new Set(), focus: null, limits: {} });
+            this._markTestHits([]);
+            this.events.emit('test', run);
+            this._pollTest(run.id);
+            return run;
+        } catch (e) {
+            T.error = e.message || String(e);
+            return null;
+        } finally {
+            T.starting = false;
+            this._renderTests();
+        }
+    }
+
+    getTestRun() { return this._test.run; }
     toggleFullscreen(force) {
         const on = force ?? !this.root.classList.contains('rze-fullscreen');
         this.root.classList.toggle('rze-fullscreen', on);
@@ -483,13 +537,14 @@ export class RulezetEditor {
         this.editorEl = h('div', { class: 'rze-editor' });
         this.outlineEl = h('aside', { class: 'rze-outline', 'aria-label': t('outline') });
         this.problemsEl = h('div', { class: 'rze-problems', 'aria-label': t('problems') });
+        this.testsEl = h('div', { class: 'rze-tests', 'aria-label': t('tests'), hidden: true });
         this.statusEl = h('div', { class: 'rze-status' });
         this.toastEl = h('div', { class: 'rze-toast', role: 'status', 'aria-live': 'polite' });
 
         const main = h('div', { class: 'rze-main' }, this.editorEl, this.outlineEl);
         this.root.append(
             this.options.toolbar ? this.toolbarEl : '',
-            this.bannerEl, main, this.problemsEl,
+            this.bannerEl, main, this.problemsEl, this.testsEl,
             this.options.statusBar ? this.statusEl : '',
             this.toastEl,
         );
@@ -531,6 +586,7 @@ export class RulezetEditor {
             }),
             hoverTooltip((view, pos, side) => this._hover(view, pos, side), { hoverTime: 350 }),
             referenceHighlighter(this),
+            testHitMarks,
             ruleLocks(this),
             renamePanel(this),
             keymap.of([
@@ -543,6 +599,7 @@ export class RulezetEditor {
                 { key: 'Mod-Shift-m', run: () => { this.toggleProblems(); return true; }, preventDefault: true },
                 { key: 'Mod-Shift-o', run: () => { this.toggleOutline(true); this._focusOutlineFilter(); return true; }, preventDefault: true },
                 { key: 'Mod-Enter', run: () => { this.validate(); return true; } },
+                { key: 'Mod-Shift-Enter', run: () => { if (!this._testsEnabled()) return false; this.runTest(); return true; }, preventDefault: true },
                 { key: 'Mod-Shift-r', run: () => { this.openRuleTools(); return true; }, preventDefault: true },
                 { key: 'Alt-z', run: () => { this.toggleLineWrapping(); return true; }, preventDefault: true },
                 { key: 'Escape', run: () => { if (this.root.classList.contains('rze-fullscreen')) { this.toggleFullscreen(false); return true; } return false; } },
@@ -953,6 +1010,12 @@ export class RulezetEditor {
     _onUpdate(update) {
         if (update.docChanged) {
             this.events.emit('change', update.state.doc.toString());
+            const T = this._test;
+            if (T.run && !T.stale && T.text !== null && update.state.doc.toString() !== T.text) {
+                T.stale = true;           // results stay, but hits no longer point into this text
+                queueMicrotask(() => this._markTestHits([]));
+                this._renderTests();
+            }
             if (this.options.draftKey) {
                 clearTimeout(this._timers.draft);
                 this._timers.draft = setTimeout(() => this._drafts().saveDraft(this.options.draftKey, this.getValue()), 800);
@@ -995,6 +1058,7 @@ export class RulezetEditor {
             this.pack.format ? btn('format', t('format'), () => this.format(), false, `${t('format')} (Shift+Alt+F)`) : '',
             this.pack.splitRules ? btn('outline', t('outline'), () => this.toggleOutline(), this._outlineOpen, `${t('outline')} (Ctrl+Shift+O)`) : '',
             btn('problems', t('problems'), () => this.toggleProblems(), this._problemsOpen, `${t('problems')} (Ctrl+Shift+M)`),
+            this._testsEnabled() ? btn('play', t('tests'), () => this.toggleTests(), this._test.open, `${t('tests')} (Ctrl+Shift+Enter: ${t('tRun').toLowerCase()})`) : '',
             h('span', { class: 'rze-toolbar-fill' }),
             ...(this.options.buttons || []).map(b => h('button', {
                 type: 'button', class: `rze-btn rze-host-btn${b.primary ? ' rze-btn-primary' : ''}`, title: b.title || b.label, 'aria-label': b.label,
@@ -1057,6 +1121,125 @@ export class RulezetEditor {
         this.outlineEl.hidden = !this._outlineOpen;
         this._renderOutline();
         this._renderToolbar();
+    }
+
+    _testsEnabled() {
+        return this.options.tests !== false && !!this.pack.test && !!(this.host && this.host.has && this.host.has('startTest'));
+    }
+
+    _testSetsKey() { return `rulezet-editor:test-sets:${this.pack.id}`; }
+
+    async _loadTestSets() {
+        const T = this._test;
+        T.loading = true;
+        T.error = null;
+        this._renderTests();
+        try {
+            const data = await this.host.testSets(this.pack.validateAs || this.pack.id);
+            T.sets = (data && data.available && data.sets) || [];
+            if (data && !data.available) T.error = this.t('tUnavailable', { host: this.host.name });
+            let saved = null;
+            try { saved = JSON.parse(window.localStorage.getItem(this._testSetsKey()) || 'null'); } catch { /* storage blocked */ }
+            const ids = new Set(T.sets.map(s => s.id));
+            // the viewer's last choice; the first time, every set
+            T.chosen = new Set(Array.isArray(saved) ? saved.filter(id => ids.has(id)) : ids);
+        } catch (e) {
+            T.sets = [];
+            T.error = e.message || String(e);
+        } finally {
+            T.loading = false;
+            this._renderTests();
+        }
+    }
+
+    _toggleTestSet(id, on) {
+        const T = this._test;
+        if (on) T.chosen.add(id); else T.chosen.delete(id);
+        try { window.localStorage.setItem(this._testSetsKey(), JSON.stringify([...T.chosen])); } catch { /* storage blocked */ }
+        this._renderTests();
+    }
+
+    _pollTest(runId) {
+        clearTimeout(this._timers.test);
+        this._timers.test = setTimeout(async () => {
+            if (this._destroyed || !this._test.run || this._test.run.id !== runId) return;
+            try {
+                const run = await this.host.testState(runId);
+                if (!this._test.run || this._test.run.id !== runId) return;
+                this._test.run = run;
+                this.events.emit('test', run);
+                if (run.status === 'queued' || run.status === 'running') this._pollTest(runId);
+            } catch (e) {
+                this._test.error = e.message || String(e);
+                this._test.run = { ...this._test.run, status: 'failed' };
+            }
+            this._renderTests();
+        }, this.options.testPollMs);
+    }
+
+    /** Highlights in the rule the strings that matched one sample; `active` is the clicked one. */
+    _focusTestSample(sampleId, activeHit = null) {
+        const T = this._test;
+        const profile = this.pack.test;
+        T.focus = sampleId;
+        if (T.stale || !profile || !profile.locate || !T.run) { this._markTestHits([]); return null; }
+        const smp = T.run.samples.find(s => s.id === sampleId);
+        if (!smp) { this._markTestHits([]); return null; }
+        const model = this.getModel();
+        const seen = new Set();
+        const marks = [];
+        let active = null;
+        for (const hit of smp.hits || []) {
+            const key = `${hit.rule}\u0000${hit.item || ''}`;
+            if (seen.has(key)) continue;          // one mark per string, however many times it matched
+            seen.add(key);
+            const isActive = !!activeHit && hit.rule === activeHit.rule && hit.item === activeHit.item;
+            const r = profile.locate(model, hit);
+            if (!r) continue;
+            marks.push({ from: r.from, to: Math.max(r.to, r.from + 1), active: !!isActive });
+            if (isActive) active = r;
+        }
+        this._markTestHits(marks);
+        return active;
+    }
+
+    _markTestHits(marks) {
+        if (!this.view || this._destroyed) return;
+        const len = this.view.state.doc.length;
+        this.view.dispatch({ effects: setTestMarks.of(marks.filter(m => m.from < len).map(m => ({ ...m, to: Math.min(m.to, len) }))) });
+    }
+
+    _testHit(hit, sampleId) {
+        if (this._test.stale) return;
+        const range = this._focusTestSample(sampleId ?? this._test.focus, hit);
+        if (range) this.goTo(range.from, { select: range.to });
+        this._renderTests();
+    }
+
+    _renderTests() {
+        if (!this._test.open) return;
+        renderTests(this.testsEl, this._test, {
+            t: this.t,
+            profile: this.pack.test,
+            onToggleSet: (id, on) => this._toggleTestSet(id, on),
+            onToggleSample: (id) => {
+                const T = this._test;
+                if (T.expanded.has(id)) {
+                    T.expanded.delete(id);
+                    if (T.focus === id) { T.focus = null; this._markTestHits([]); }
+                } else {
+                    T.expanded.add(id);
+                    this._focusTestSample(id);
+                }
+                this._renderTests();
+            },
+            onQuery: (q) => { this._test.query = q; this._renderTests(); },
+            onFilter: (f) => { this._test.filter = f; this._renderTests(); },
+            onMore: (setId) => { const L = this._test.limits; L[setId] = (L[setId] || 100) + 200; this._renderTests(); },
+            onRun: () => this.runTest(),
+            onHit: (hit, sampleId) => this._testHit(hit, sampleId),
+            onClose: () => this.toggleTests(false),
+        });
     }
 
     _setProblemsOpen(open) {
@@ -1126,6 +1309,8 @@ export class RulezetEditor {
             { id: 'validate', label: `Validate on ${this.host ? this.host.name : 'server'} now`, key: 'Ctrl+Enter', run: () => this.validate(), when: () => this._serverEnabled() },
             { id: 'nextProblem', label: 'Next problem', key: 'F8', run: () => nextDiagnostic(v) },
             { id: 'prevProblem', label: 'Previous problem', key: 'Shift+F8', run: () => previousDiagnostic(v) },
+            { id: 'tests', label: `Toggle ${t('tests').toLowerCase()} panel`, run: () => this.toggleTests(), when: () => this._testsEnabled() },
+            { id: 'runTest', label: `${t('tRun')}`, key: 'Ctrl+Shift+Enter', run: () => this.runTest(), when: () => this._testsEnabled() },
             { id: 'problems', label: `Toggle ${t('problems').toLowerCase()} panel`, key: 'Ctrl+Shift+M', run: () => this.toggleProblems() },
             { id: 'outline', label: `Toggle ${t('outline').toLowerCase()} panel`, key: 'Ctrl+Shift+O', run: () => this.toggleOutline(), when: () => !!this.pack.splitRules },
             { id: 'find', label: 'Find / replace', key: 'Ctrl+F', run: () => openSearchPanel(v) },
@@ -1320,6 +1505,24 @@ function referenceHighlighter(editor) {
         }
     }, { decorations: v => v.decorations });
 }
+
+/** Strings of the rule that matched the test sample the user opened (Test panel). */
+const testHitMarks = StateField.define({
+    create: () => Decoration.none,
+    update(value, tr) {
+        value = value.map(tr.changes);
+        for (const e of tr.effects) {
+            if (!e.is(setTestMarks)) continue;
+            const marks = e.value
+                .filter(m => m.to > m.from)
+                .sort((a, b) => a.from - b.from)
+                .map(m => Decoration.mark({ class: m.active ? 'rze-test-mark rze-test-mark-active' : 'rze-test-mark' }).range(m.from, m.to));
+            value = Decoration.set(marks, true);
+        }
+        return value;
+    },
+    provide: f => EditorView.decorations.from(f),
+});
 
 /** The rename box (F2), as an editor panel. */
 function renamePanel(editor) {

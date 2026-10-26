@@ -38,6 +38,7 @@ RULEZET_URL=https://rulezet.org npm run dev
 | Navigation | hover docs (keywords, modules, strings with byte length / hex, rules, rules on Rulezet), go to definition (F12, Ctrl+Click), highlight of every occurrence, rename (F2) |
 | Several rules per document | rules panel with status per rule, strings and condition, filter, copy one rule |
 | Formatting | Shift+Alt+F: one layout, aligned `=`, comments kept, rules with errors left untouched |
+| Tests | Test panel: run the rules on sample sets (rulezet-tester), live verdict per sample, false positives, click a hit to select the string |
 | Editor | folding per rule and section, multi-cursor, find / replace, command palette (Ctrl+Shift+P), light / dark / auto theme, full screen, drafts kept in the browser, English / French UI |
 
 ## Use it in a page
@@ -75,6 +76,7 @@ With Vue 3: `createVueComponent(Vue)` returns a `v-model` component. Details in
 | Ctrl+Shift+M | problems panel |
 | F8 / Shift+F8 | next / previous problem |
 | Ctrl+Enter | validate on the server now |
+| Ctrl+Shift+Enter | run the tests |
 | Ctrl+S | `save` event for the host page |
 | Ctrl+/ | toggle comment |
 

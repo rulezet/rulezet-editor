@@ -235,6 +235,17 @@ server answer. Switching swaps all of that at once. `getDocumentText(id)`, `getR
   file type check…); each returns changes, the core applies them and fills `{{uuid}}` / `{{date}}`.
 - **Command palette** (Ctrl+Shift+P, F1): every core command plus every rule tool.
 
+### 3.9 Tests on samples
+
+The **Test** button exists when the pack has a `test` profile and the host has `startTest`. The
+editor never runs a rule itself: the host (in practice the editor server with
+[rulezet-tester](https://github.com/rulezet/rulezet-tester) mounted on `/test`) runs it in a
+sandbox. `runTest()` sends the whole document and the ticked sets, then polls `testState` every
+`testPollMs` (700 ms) and re-renders the panel (`src/ui/tests.js`) on each answer, so samples turn
+from *pending* to a verdict one after the other. `pack.test.hitLabel` writes a hit
+(`$lic at 0x14`), `pack.test.locate` finds the matched string in the current model for the
+click. Changing the text marks the results as stale. Details: [rulezet/testing.md](rulezet/testing.md).
+
 ## 4. The YARA pack
 
 `src/languages/yara/index.js` assembles the pack from files that each do one thing:
