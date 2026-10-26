@@ -171,3 +171,32 @@ def test_no_tests_without_a_service():
     c = app.test_client()
     assert c.get('/editor-api/').json['features']['test'] is False
     assert c.get('/editor-api/test/sets?format=yara').status_code == 404
+
+
+def test_fields_and_suggestions():
+    fields = [{'id': 'cve', 'label': 'CVE', 'type': 'list', 'meta': {'key': 'cve'}}]
+    backend = FunctionBackend(fields=lambda fmt: fields if fmt in ('', 'yara') else None,
+                              suggest=lambda fmt, field, q, limit: [{'value': q.upper(), 'label': q.upper()}][:limit])
+    app = Flask(__name__)
+    app.register_blueprint(create_blueprint(backend), url_prefix='/editor-api')
+    c = app.test_client()
+    assert c.get('/editor-api/').json['features']['fields'] is True
+    assert c.get('/editor-api/fields?format=yara').json == {'fields': fields}
+    assert c.get('/editor-api/fields?format=sigma').json == {'fields': []}
+    assert c.get('/editor-api/fields/suggest?format=yara&field=cve&q=cve-2024').json == {'results': [{'value': 'CVE-2024', 'label': 'CVE-2024'}]}
+    plain = Flask(__name__)
+    plain.register_blueprint(create_blueprint(FunctionBackend()), url_prefix='/editor-api')
+    assert plain.test_client().get('/editor-api/').json['features']['fields'] is False
+
+
+def test_field_browse():
+    seen = []
+    def browse(fmt, field, path, page):
+        seen.append((field, path, page))
+        return {'folders': [{'id': 'misp', 'label': 'misp', 'count': 3}]} if not path else {'items': [{'value': 1, 'label': 'misp:a'}], 'has_more': True}
+    app = Flask(__name__)
+    app.register_blueprint(create_blueprint(FunctionBackend(browse=browse)), url_prefix='/editor-api')
+    c = app.test_client()
+    assert c.get('/editor-api/fields/browse?format=yara&field=tags').json == {'folders': [{'id': 'misp', 'label': 'misp', 'count': 3}], 'items': [], 'has_more': False}
+    assert c.get('/editor-api/fields/browse?format=yara&field=tags&path=Public/misp%253Aa&page=2').json['has_more'] is True
+    assert seen[-1] == ('tags', ['Public', 'misp:a'], 2)

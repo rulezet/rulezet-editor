@@ -4,6 +4,9 @@ HTTP layer: a Flask blueprint the browser editor talks to (EditorServerHost on t
     POST /validate          { format, content }   -> { format, valid, items: [...] }
     GET  /rules?format=&q=&limit=                  -> { results: [...] }
     GET  /rules/<name>?format=                     -> rule | 404
+    GET  /fields?format=                           -> { fields: [...] }        (Fields panel; [] = none)
+    GET  /fields/suggest?format=&field=&q=         -> { results: [{ value, label, detail? }] }
+    GET  /fields/browse?format=&field=&path=&page= -> { folders, items, has_more }  (path: a/b, URL-encoded parts)
     GET  /                                         -> { name, formats, features }
     GET  /assets/<file>                            -> dist/ (editor JS and CSS)
 
@@ -40,7 +43,8 @@ def create_blueprint(backend, name='rulezet_editor', max_content=MAX_CONTENT, as
         return jsonify({
             'name': backend.name,
             'formats': backend.formats(),
-            'features': {'validate': True, 'rules': True, 'test': bool(tests and tests.formats())},
+            'features': {'validate': True, 'rules': True, 'test': bool(tests and tests.formats()),
+                         'fields': backend.fields('') is not None},
         })
 
     if tests is not None:
@@ -78,6 +82,40 @@ def create_blueprint(backend, name='rulezet_editor', max_content=MAX_CONTENT, as
         except BackendError as e:
             return error(str(e), 502)
         return jsonify({'results': results or [], 'available': results is not None})
+
+    @bp.get('/fields')
+    def fields():
+        try:
+            items = backend.fields(request.args.get('format', '').strip())
+        except BackendError as e:
+            return error(str(e), 502)
+        return jsonify({'fields': items or []})
+
+    @bp.get('/fields/suggest')
+    def suggest():
+        field = request.args.get('field', '').strip()[:64]
+        query = request.args.get('q', '').strip()[:200]
+        limit = max(1, min(request.args.get('limit', 10, type=int) or 10, 50))
+        try:
+            results = backend.suggest(request.args.get('format', '').strip(), field, query, limit)
+        except BackendError as e:
+            return error(str(e), 502)
+        return jsonify({'results': results or []})
+
+    @bp.get('/fields/browse')
+    def browse():
+        from urllib.parse import unquote
+        field = request.args.get('field', '').strip()[:64]
+        raw = request.args.get('path', '')
+        path = [unquote(p)[:200] for p in raw.split('/') if p][:5]
+        page = max(1, min(request.args.get('page', 1, type=int) or 1, 1000))
+        try:
+            data = backend.browse(request.args.get('format', '').strip(), field, path, page)
+        except BackendError as e:
+            return error(str(e), 502)
+        data = data or {}
+        return jsonify({'folders': data.get('folders') or [], 'items': data.get('items') or [],
+                        'has_more': bool(data.get('has_more'))})
 
     @bp.get('/rules/<path:rule_name>')
     def get_rule(rule_name):

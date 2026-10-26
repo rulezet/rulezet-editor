@@ -13,6 +13,9 @@
  *   GET  /test/sets?format=               -> { available, sets }      (rulezet-tester)
  *   POST /test/  { format, text, sets }   -> 202 run
  *   GET  /test/<run id>                   -> run
+ *   GET  /fields?format=                  -> { fields }               (Fields panel)
+ *   GET  /fields/suggest?format=&field=&q= -> { results }
+ *   GET  /fields/browse?format=&field=&path=&page= -> { folders, items, has_more }
  */
 import { HttpHost } from './HostAdapter.js';
 
@@ -35,6 +38,27 @@ export class EditorServerHost extends HttpHost {
         const params = new URLSearchParams({ format: this.format(language), q: query, limit: String(limit) });
         const data = await this._request(`/rules?${params}`, { headers: this._headers(false) });
         return data.results || [];
+    }
+
+    async ruleFields(language) {
+        const params = new URLSearchParams({ format: this.format(language) });
+        try {
+            return (await this._request(`/fields?${params}`, { headers: this._headers(false) })).fields || [];
+        } catch (e) {
+            if (e.status === 404) return [];
+            throw e;
+        }
+    }
+
+    async suggest(language, field, query, { limit = 10 } = {}) {
+        const params = new URLSearchParams({ format: this.format(language), field, q: query, limit: String(limit) });
+        return (await this._request(`/fields/suggest?${params}`, { headers: this._headers(false) })).results || [];
+    }
+
+    async browse(language, field, path = [], page = 1) {
+        const params = new URLSearchParams({ format: this.format(language), field, page: String(page),
+                                             path: path.map(encodeURIComponent).join('/') });
+        return this._request(`/fields/browse?${params}`, { headers: this._headers(false) });
     }
 
     async testSets(language) {

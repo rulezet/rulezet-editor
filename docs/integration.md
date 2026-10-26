@@ -130,6 +130,9 @@ Without any server at all, `RulezetHost` calls the public Rulezet API straight f
 | `draftKey` | `null` | autosave drafts under this key |
 | `buttons` | `[]` | host page buttons in the toolbar: `{ id, label, icon?, title?, primary?, disabled?(editor), run(editor) }`; `refreshToolbar()` after a state change |
 | `author` | `null` | default author offered by the "Set author" rule tool (Rulezet: the logged-in user) |
+| `fields` | `'auto'` | Fields panel when the pack has `meta` and the host has `ruleFields`; `false` hides it ([rulezet/fields.md](rulezet/fields.md)) |
+| `fieldsOpen` | `true` | the Fields panel is open at start |
+| `fieldsReport` | `true` | fields written into the rule by default (a field definition's `report` wins); `false` on an edit page |
 | `tests` | `'auto'` | Test panel when the pack has `test` and the host has `startTest`; `false` hides it ([rulezet/testing.md](rulezet/testing.md)) |
 | `testPollMs` | `700` | how often a running test is polled |
 | `lineWrapping` | `null` | wrap long lines (line numbers stay the real ones); `null` = the viewer's last choice, off by default. Toolbar button, Alt+Z, `setLineWrapping(on)` |
@@ -140,9 +143,9 @@ Methods: `getValue()`, `setValue(text)`, `getLanguage()`, `setLanguage(id)`, `ge
 `getDiagnostics()`, `getModel()`, `format()`, `validate()`, `goTo(pos | {line})`, `insertText(text)`,
 `newRule()`, `goToDefinition()`, `startRename()`, `openPalette()`, `execCommand(id)`,
 `toggleOutline()`, `toggleProblems()`, `toggleFullscreen()`, `setTheme()`, `setReadOnly()`,
-`setAnnotations({ diagnostics, rules, source }, { document })` (host results for the current text: underlines, problems panel, a badge and notes per rule in the rules panel; dropped when the text changes), `clearAnnotations()`, `notify(message)`, `refreshToolbar()`, `openRuleTools()`, several documents: `openDocument(id, { text })`, `closeDocument(id)`, `activeDocument()`, `documentIds()`, `getDocumentText(id)`, `getRulesOf(id)`, `getModelOf(id)`, locks: `lockRule(name, { label, canUnlock, url })`, `lockRuleIn(id, name, info)`, `unlockRule(name)`, `isLocked(name)`, `getLocks()`, `runAction(id, value?)`, `toggleTests()`, `runTest()`, `getTestRun()`, `toggleSearch()`, `setLineWrapping(on)`, `toggleLineWrapping()`, `clearDraft()`, `focus()`, `destroy()`.
+`setAnnotations({ diagnostics, rules, source }, { document })` (host results for the current text: underlines, problems panel, a badge and notes per rule in the rules panel; dropped when the text changes), `clearAnnotations()`, `notify(message)`, `refreshToolbar()`, `openRuleTools()`, several documents: `openDocument(id, { text })`, `closeDocument(id)`, `activeDocument()`, `documentIds()`, `getDocumentText(id)`, `getRulesOf(id)`, `getModelOf(id)`, locks: `lockRule(name, { label, canUnlock, url })`, `lockRuleIn(id, name, info)`, `unlockRule(name)`, `isLocked(name)`, `getLocks()`, `runAction(id, value?)`, `toggleFields()`, `pickFieldsRule(name)`, `fieldDefinitions()`, `getFieldValues(rule)`, `getAllFieldValues()`, `setFieldValues(rule, values, { report })`, `toggleTests()`, `runTest()`, `getTestRun()`, `toggleSearch()`, `setLineWrapping(on)`, `toggleLineWrapping()`, `clearDraft()`, `focus()`, `destroy()`.
 
-Events: `ready`, `change`, `test`, `document`, `locks`, `diagnostics`, `validated`, `format`, `save`, `language`, `action`, `annotationsCleared`.
+Events: `ready`, `change`, `fields`, `test`, `document`, `locks`, `diagnostics`, `validated`, `format`, `save`, `language`, `action`, `annotationsCleared`.
 
 Events (`editor.on(name, fn)`): `ready`, `change`, `diagnostics`, `validated`, `format`, `save`,
 `language`.

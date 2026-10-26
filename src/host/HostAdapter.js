@@ -14,6 +14,11 @@
  *   testSets(language)              -> { available, sets: [{ id, name, kind, count, description, labels }] }
  *   startTest(language, text, sets) -> run (every sample pending)
  *   testState(runId)                -> run; poll until status is done | failed
+ *
+ *   Fields panel (the host's metadata for a rule: title, CVE, tags...; docs/fields.md):
+ *   ruleFields(language)            -> [{ id, label, type, help?, options?, suggest?, report?, meta? }]
+ *   suggest(language, field, query) -> [{ value, label, detail?, color? }]
+ *   browse(language, field, path, page) -> { folders: [{ id, label, count? }], items, has_more }
  */
 export class HostAdapter {
     constructor() {

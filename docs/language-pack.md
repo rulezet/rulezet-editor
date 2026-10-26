@@ -36,6 +36,8 @@ Start from `src/languages/_template/`. The YARA pack (`src/languages/yara/`) use
 | `splitRules(model)` | rule[] | rules panel, `getRules()`, status bar count |
 | `folding(model)` | range[] | fold markers |
 | `dependencies(model)` | ref[] | rules used but not defined (host lookup) |
+| `meta` | object | Fields panel: `{ entries(model, rule), set(model, rule, key, value), remove(model, rule, key) }` ([rulezet/fields.md](rulezet/fields.md)) |
+| `body` | object | Strings & condition form: `{ modifiers, read(model, rule), setString(model, rule, index, s), removeString(...), setCondition(...) }` |
 | `test` | object | Test panel: `{ sampleKind, hitLabel(hit), locate(model, hit) -> { from, to } }` ([rulezet/testing.md](rulezet/testing.md)) |
 | `actions(ctx)` | action[] | "Rule tools" (toolbar, Ctrl+Shift+R, palette): `{ id, label, input?: { label, placeholder, value? }, run(ctx, value) -> changes[] \| { error } }`. `ctx.author` is the editor's `author` option; `{{uuid}}` / `{{date}}` are filled in |
 

@@ -24,6 +24,10 @@ class MyHost extends HostAdapter {
   // One rule by exact name: hover, "exists on ..." diagnostics, insert action, Ctrl+Click.
   async getRule(language, name) { return null; }
 
+  // Fields panel: the host's metadata for a rule, and autocompletion for it.
+  async ruleFields(language) { return [{ id: 'cve', label: 'CVE', type: 'list', meta: { key: 'cve' } }]; }
+  async suggest(language, field, query) { return [{ value, label, detail }]; }
+
   // Tests on samples (rulezet-tester behind the host): the Test panel.
   async testSets(language) { return { available: true, sets: [] }; }
   async startTest(language, text, sets) { return run; }      // every sample pending

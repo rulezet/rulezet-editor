@@ -88,6 +88,22 @@ class Backend:
     def get_rule(self, fmt, name):
         return None
 
+    def fields(self, fmt):
+        """The host's fields for a rule of this format (Fields panel), or None.
+        [{ id, label, type: text|textarea|select|list, help?, required?, options?: [{value, label}],
+           suggest?: bool, report?: bool (written into the rule by default),
+           meta?: { key, aliases?: [..], extract?: 'cve' | 'url', join?: ', ' } }]"""
+        return None
+
+    def suggest(self, fmt, field, query, limit=10):
+        """Values for a field as the user types: [{ value, label, detail? }], or None."""
+        return None
+
+    def browse(self, fmt, field, path, page=1):
+        """A level of the field's folders: { folders: [{ id, label, count?, color?, group? }],
+        items: [{ value, label, detail?, color? }], has_more }, or None."""
+        return None
+
 
 class LocalBackend(Backend):
     """Validation with the compilers available here. No rule lookup: there is no database."""
@@ -183,12 +199,25 @@ class FunctionBackend(Backend):
         )
     """
 
-    def __init__(self, validate=None, search_rules=None, get_rule=None, formats=None, name='host'):
+    def __init__(self, validate=None, search_rules=None, get_rule=None, formats=None, name='host',
+                 fields=None, suggest=None, browse=None):
         self.name = name
         self._validate = validate
         self._search = search_rules
         self._get = get_rule
         self._formats = formats
+        self._fields = fields
+        self._suggest = suggest
+        self._browse = browse
+
+    def browse(self, fmt, field, path, page=1):
+        return self._browse(fmt, field, path, page) if self._browse else None
+
+    def fields(self, fmt):
+        return self._fields(fmt) if self._fields else None
+
+    def suggest(self, fmt, field, query, limit=10):
+        return self._suggest(fmt, field, query, limit) if self._suggest else None
 
     def formats(self):
         return list(self._formats() if callable(self._formats) else self._formats or [])
@@ -232,6 +261,15 @@ class ChainBackend(Backend):
 
     def validate(self, fmt, content):
         return self._first('validate', fmt, content)
+
+    def fields(self, fmt):
+        return self._first('fields', fmt)
+
+    def suggest(self, fmt, field, query, limit=10):
+        return self._first('suggest', fmt, field, query, limit)
+
+    def browse(self, fmt, field, path, page=1):
+        return self._first('browse', fmt, field, path, page)
 
     def search_rules(self, fmt, query, limit=10):
         return self._first('search_rules', fmt, query, limit)

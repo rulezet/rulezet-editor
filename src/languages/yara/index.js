@@ -7,7 +7,7 @@ import { lint, DEFAULT_LINT_OPTIONS } from './lint.js';
 import { complete, TOP_SNIPPETS } from './completion.js';
 import { hover, definition, references, rename } from './navigation.js';
 import { format, DEFAULT_FORMAT_OPTIONS } from './format.js';
-import { actions } from './actions.js';
+import { actions, setMeta } from './actions.js';
 import { stream } from './highlight.js';
 import { conditionRefs } from './analysis.js';
 import { MODULES } from './modules.js';
@@ -78,6 +78,123 @@ export default {
         }));
     },
 
+    /** Key / value metadata of a rule (Fields panel): YARA `meta:` entries. */
+    meta: {
+        /** meta: entries, plus the rule's header tags (rule X : a b) as the pseudo key "@tags". */
+        entries(model, ruleName) {
+            const rule = model.rules.find(r => r.name === ruleName);
+            if (!rule) return null;
+            const out = rule.meta.map(m => ({ key: m.key, value: String(m.value) }));
+            if (rule.tags.length) out.push({ key: '@tags', value: rule.tags.map(t => t.name).join(' ') });
+            return out;
+        },
+        /** Sets `key` (string value), replacing its first occurrence or adding it. */
+        set(model, ruleName, key, value) {
+            const rule = model.rules.find(r => r.name === ruleName);
+            if (!rule || rule.openBrace == null || !/^[A-Za-z_]\w*$/.test(key)) return null;
+            const quoted = `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ')}"`;
+            return setMeta(model.text, rule, key, quoted);
+        },
+        /** A new rule to fill from the Fields panel (no placeholders: it compiles once $s1 is set). */
+        skeleton(name, { strings = true } = {}) {
+            const body = strings ? '    strings:\n        $s1 = "change me"\n    condition:\n        $s1\n' : '    condition:\n        true\n';
+            return `rule ${name}\n{\n    meta:\n        id = "{{uuid}}"\n        date = "{{date}}"\n${body}}\n`;
+        },
+        /** A rule identifier made from a title: "My rule (v2)" -> My_rule_v2. */
+        ruleName(title) {
+            let n = String(title || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
+            if (!n) return null;
+            if (/^\d/.test(n)) n = `rule_${n}`;
+            return n.slice(0, 128);
+        },
+        /** Renames a rule everywhere in the document (its declaration and every use). */
+        renameRule(model, ruleName, newName) {
+            const rule = model.rules.find(r => r.name === ruleName);
+            if (!rule || rule.nameFrom == null) return null;
+            if (model.rules.some(r => r.name === newName)) return { error: `A rule named ${newName} already exists` };
+            const res = rename({ text: model.text, pos: rule.nameFrom, parsed: model }, newName);
+            return res.error ? res : res.changes;
+        },
+        /** Removes every `key = ...` line of the rule (and an emptied meta: section). */
+        remove(model, ruleName, key) {
+            const rule = model.rules.find(r => r.name === ruleName);
+            if (!rule) return null;
+            const text = model.text;
+            const hits = rule.meta.filter(m => m.key === key);
+            if (!hits.length) return [];
+            const lineOf = (pos) => {
+                const s = text.lastIndexOf('\n', pos - 1);
+                const e = text.indexOf('\n', pos);
+                return { from: s, to: e === -1 ? text.length : e };    // removes the newline before the line
+            };
+            if (hits.length === rule.meta.length && rule.sections.meta) {
+                const sec = lineOf(rule.sections.meta.from);
+                const last = lineOf(hits[hits.length - 1].to);
+                return [{ from: sec.from, to: last.to, insert: '' }];
+            }
+            return hits.map(m => ({ ...lineOf(m.from), insert: '' }));
+        },
+    },
+
+    /** Strings and condition as form fields (Fields panel, "Strings & condition"). */
+    body: {
+        modifiers: {
+            text: ['ascii', 'wide', 'nocase', 'fullword', 'private', 'xor', 'base64', 'base64wide'],
+            hex: ['private'],
+            regex: ['ascii', 'wide', 'nocase', 'fullword', 'private'],
+        },
+        /** { strings: [{ index, id, kind, value, modifiers: [{ name, args }] }], condition } or null. */
+        read(model, ruleName) {
+            const rule = model.rules.find(r => r.name === ruleName);
+            if (!rule) return null;
+            return {
+                strings: rule.strings.map((s, index) => ({ index, id: s.id, kind: s.kind, value: bodyValue(s), modifiers: s.modifiers.map(m => ({ name: m.name, args: m.args })) })),
+                condition: rule.condition ? rule.condition.text : '',
+            };
+        },
+        /** Replaces string `index` (or adds one when index is null). s: { id, kind, value, modifiers } */
+        setString(model, ruleName, index, s) {
+            const rule = model.rules.find(r => r.name === ruleName);
+            if (!rule || rule.openBrace == null) return null;
+            const line = stringLine(s);
+            if (!line) return null;
+            const text = model.text;
+            if (index !== null && rule.strings[index]) {
+                const old = rule.strings[index];
+                return [{ from: old.from, to: old.to, insert: line }];
+            }
+            const ind = bodyIndents(text, rule);
+            if (rule.strings.length) {
+                const last = rule.strings[rule.strings.length - 1];
+                return [{ from: last.to, to: last.to, insert: `\n${ind.entry}${line}` }];
+            }
+            if (rule.sections.strings) return [{ from: rule.sections.strings.to, to: rule.sections.strings.to, insert: `\n${ind.entry}${line}` }];
+            const cond = rule.sections.condition;
+            if (cond) {
+                const at = text.lastIndexOf('\n', cond.from - 1) + 1;
+                return [{ from: at, to: at, insert: `${ind.section}strings:\n${ind.entry}${line}\n` }];
+            }
+            return [{ from: rule.closeBrace, to: rule.closeBrace, insert: `${ind.section}strings:\n${ind.entry}${line}\n` }];
+        },
+        removeString(model, ruleName, index) {
+            const rule = model.rules.find(r => r.name === ruleName);
+            const s = rule && rule.strings[index];
+            if (!s) return null;
+            const text = model.text;
+            const from = text.lastIndexOf('\n', s.from - 1);
+            return [{ from: from < 0 ? s.from : from, to: s.to, insert: '' }];
+        },
+        setCondition(model, ruleName, condition) {
+            const rule = model.rules.find(r => r.name === ruleName);
+            if (!rule || rule.openBrace == null) return null;
+            const value = String(condition || '').trim() || 'true';
+            if (rule.condition && rule.condition.text) return [{ from: rule.condition.from, to: rule.condition.to, insert: value }];
+            const ind = bodyIndents(model.text, rule);
+            if (rule.sections.condition) return [{ from: rule.sections.condition.to, to: rule.sections.condition.to, insert: `\n${ind.entry}${value}` }];
+            return [{ from: rule.closeBrace, to: rule.closeBrace, insert: `${ind.section}condition:\n${ind.entry}${value}\n` }];
+        },
+    },
+
     /** Tests on samples (rulezet-tester): how a hit reads and where it points in the rule. */
     test: {
         sampleKind: 'file',
@@ -118,6 +235,32 @@ export default {
         return ranges;
     },
 };
+
+/** What the form shows for a string: the text inside the quotes / braces, a regex as written. */
+function bodyValue(s) {
+    if (s.kind === 'text') return s.raw.slice(1, s.raw.endsWith('"') && s.raw.length > 1 ? -1 : undefined);
+    if (s.kind === 'hex') return s.raw.replace(/^\{\s*|\s*\}$/g, '');
+    return s.raw;
+}
+
+function stringLine(s) {
+    const id = String(s.id || '').trim().replace(/^\$?/, '$');
+    if (!/^\$[A-Za-z0-9_]*$/.test(id)) return null;
+    let value = String(s.value ?? '');
+    if (s.kind === 'text') value = `"${value.replace(/(^|[^\\])"/g, '$1\\"')}"`;
+    else if (s.kind === 'hex') value = `{ ${value.trim()} }`;
+    else if (!/^\/.*\/[is]*$/s.test(value.trim())) value = `/${value.trim()}/`;
+    const mods = (s.modifiers || []).map(m => (m.args ? `${m.name}(${m.args})` : m.name)).join(' ');
+    return `${id} = ${value.trim ? value.trim() : value}${mods ? ' ' + mods : ''}`;
+}
+
+function bodyIndents(text, rule) {
+    const lineIndent = (pos) => { const s = text.lastIndexOf('\n', pos - 1) + 1; return text.slice(s, pos).match(/^[ \t]*/)[0]; };
+    const sec = Object.values(rule.sections)[0];
+    const section = sec ? lineIndent(sec.from) : '    ';
+    const first = rule.strings[0] || rule.meta[0];
+    return { section, entry: first ? lineIndent(first.from) : section + '    ' };
+}
 
 function trimEnd(text, pos) {
     while (pos > 0 && /\s/.test(text[pos - 1])) pos--;

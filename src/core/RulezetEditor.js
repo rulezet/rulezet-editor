@@ -36,6 +36,9 @@ import { h, icon } from '../ui/dom.js';
 import { renderOutline } from '../ui/outline.js';
 import { renderProblems } from '../ui/problems.js';
 import { renderTests } from '../ui/tests.js';
+import { renderFields } from '../ui/fields.js';
+import { resizable } from '../ui/resize.js';
+import { emptyValue, fieldStatus, initialState, isEmpty, readField, sameValue, toMetaValue } from './fields.js';
 import { CommandPalette } from '../ui/palette.js';
 
 registerLanguage(plain);
@@ -61,6 +64,9 @@ const DEFAULTS = {
     author: null,
     buttons: [],                 // host page buttons in the toolbar: [{ id, label, icon?, title?, primary?, disabled?(), run(editor) }]                // default author for authoring actions (e.g. the logged-in user)
     lineWrapping: null,          // null: last choice of this viewer (default off)
+    fields: 'auto',              // Fields panel: 'auto' = when the pack has `meta` and the host has ruleFields; false = never
+    fieldsReport: true,          // fields written into the rule by default (a field definition's `report` wins)
+    fieldsOpen: true,            // the Fields panel is open when the editor starts (when it is available)
     tests: 'auto',               // Test panel: 'auto' = when the pack has `test` and the host has startTest; false = never
     testPollMs: 700,             // how often a running test is polled
     placeholder: '',
@@ -75,7 +81,8 @@ const COMPLETION_TYPES = {
 const renameEffect = StateEffect.define();
 const locksChanged = StateEffect.define();
 const refreshLint = StateEffect.define();
-const setTestMarks = StateEffect.define();      // [{ from, to, active }] or [] : strings a test sample matched
+const setTestMarks = StateEffect.define();
+const DRAFT = '\u0000draft';                      // Fields panel state while the document has no rule      // [{ from, to, active }] or [] : strings a test sample matched
 
 export class RulezetEditor {
     static registerLanguage(pack) { return registerLanguage(pack); }
@@ -100,6 +107,7 @@ export class RulezetEditor {
         this._serverState = this._serverEnabled() ? 'idle' : 'off';
         this._externals = new Map();
         this._test = { open: false, sets: null, chosen: new Set(), expanded: new Set(), focus: null, query: '', filter: 'all', limits: {}, run: null, error: null, loading: false, starting: false, text: null, stale: false };
+        this._fields = { open: false, defs: null, loading: false, error: null, byRule: new Map(), picked: null, suggest: null, ui: {} };
         this._timers = {};
         this._destroyed = false;
 
@@ -113,6 +121,7 @@ export class RulezetEditor {
         this._buildDom(element);
         this._createView(initial);
         this._renderToolbar();          // host buttons can now ask the editor (disabled())
+        if (this.options.fieldsOpen && this._fieldsEnabled()) this.toggleFields(true);
         this._applyTheme();
         this._watchTheme();
         this._setOutlineOpen(this.options.outline === true);
@@ -141,6 +150,9 @@ export class RulezetEditor {
         this.pack = this._resolvePack(id, this.getValue());
         this._server = { text: null, items: [], error: null };
         this._externals.clear();
+        this._fields = { ...this._fields, defs: null, byRule: new Map(), picked: null, suggest: null };
+        if (!this._fieldsEnabled()) this.toggleFields(false);
+        else if (this._fields.open) this._loadFieldDefs();
         clearTimeout(this._timers.test);
         this._test = { ...this._test, sets: null, chosen: new Set(), run: null, error: null, stale: false };
         if (!this._testsEnabled()) this.toggleTests(false);
@@ -424,6 +436,58 @@ export class RulezetEditor {
     }
 
     getTestRun() { return this._test.run; }
+
+    // ── fields (the host's metadata for each rule, optionally written into it) ──
+
+    toggleFields(force) {
+        const open = !!(force ?? !this._fields.open) && this._fieldsEnabled();
+        this._fields.open = open;
+        this.fieldsEl.hidden = !open;
+        if (open && !this._fields.defs && !this._fields.loading) this._loadFieldDefs();
+        this._renderFields();
+        this._renderToolbar();
+    }
+
+    /** Shows this rule in the Fields panel (null: the rule under the cursor). */
+    pickFieldsRule(name) {
+        this._fields.picked = name || null;
+        this._renderFields();
+    }
+
+    /** The field definitions the host gave (null until loaded). */
+    fieldDefinitions() { return this._fields.defs; }
+
+    /** One rule's field values: { values: { id: value }, report: { id: bool }, keep: { id: bool } }. */
+    getFieldValues(ruleName) {
+        const defs = this._fields.defs;
+        if (!defs) return null;
+        const s = this._fieldState(ruleName);
+        return s ? JSON.parse(JSON.stringify(s)) : null;
+    }
+
+    /** Every rule of the document: { ruleName: { values, report, keep } }. */
+    getAllFieldValues() {
+        const out = {};
+        if (!this._fields.defs) return out;
+        for (const r of this.getRules()) out[r.name] = this.getFieldValues(r.name);
+        return out;
+    }
+
+    /** The host sets a rule's values (edit page: what it has stored). report: write them into the rule. */
+    setFieldValues(ruleName, values, { report = false } = {}) {
+        const defs = this._fields.defs;
+        if (!defs) { this._fields.pending = [...(this._fields.pending || []), [ruleName, values, { report }]]; return; }
+        const s = this._fieldState(ruleName, { force: true });
+        if (!s) return;
+        for (const def of defs) {
+            if (!(def.id in values)) continue;
+            s.values[def.id] = values[def.id] ?? emptyValue(def);
+            s.report[def.id] = !!def.meta && report;
+            s.keep[def.id] = false;
+            if (s.report[def.id]) this._writeField(ruleName, def, s.values[def.id]);
+        }
+        this._fieldsChanged(ruleName);
+    }
     toggleFullscreen(force) {
         const on = force ?? !this.root.classList.contains('rze-fullscreen');
         this.root.classList.toggle('rze-fullscreen', on);
@@ -536,12 +600,13 @@ export class RulezetEditor {
         this.bannerEl = h('div', { class: 'rze-banner', hidden: true });
         this.editorEl = h('div', { class: 'rze-editor' });
         this.outlineEl = h('aside', { class: 'rze-outline', 'aria-label': t('outline') });
+        this.fieldsEl = h('aside', { class: 'rze-fields', 'aria-label': t('fields'), hidden: true });
         this.problemsEl = h('div', { class: 'rze-problems', 'aria-label': t('problems') });
         this.testsEl = h('div', { class: 'rze-tests', 'aria-label': t('tests'), hidden: true });
         this.statusEl = h('div', { class: 'rze-status' });
         this.toastEl = h('div', { class: 'rze-toast', role: 'status', 'aria-live': 'polite' });
 
-        const main = h('div', { class: 'rze-main' }, this.editorEl, this.outlineEl);
+        const main = h('div', { class: 'rze-main' }, this.editorEl, this.outlineEl, this.fieldsEl);
         this.root.append(
             this.options.toolbar ? this.toolbarEl : '',
             this.bannerEl, main, this.problemsEl, this.testsEl,
@@ -555,6 +620,15 @@ export class RulezetEditor {
         });
         this.palette = new CommandPalette(this.root, t);
         element.appendChild(this.root);
+        // every panel can be resized with the mouse (sizes remembered per viewer)
+        const half = () => this.root.getBoundingClientRect().width * 0.7;
+        const tall = () => this.root.getBoundingClientRect().height * 0.8;
+        resizable(this.outlineEl, { axis: 'x', key: 'outline', min: 180, max: half });
+        resizable(this.fieldsEl, { axis: 'x', key: 'fields', min: 240, max: half });
+        resizable(this.problemsEl, { axis: 'y', key: 'problems', min: 80, max: tall });
+        resizable(this.testsEl, { axis: 'y', key: 'tests', min: 140, max: tall });
+        resizable(this.root, { axis: 'y', side: 'after', key: 'editor', min: 260, max: () => window.innerHeight * 3,
+            onResize: () => this.view && this.view.requestMeasure() });
         this._renderToolbar();
     }
 
@@ -921,6 +995,7 @@ export class RulezetEditor {
         this._renderOutline();
         this._renderProblems();
         this._renderStatus();
+        this._renderFields();
         this.events.emit('diagnostics', this.getDiagnostics());
     }
 
@@ -1029,6 +1104,10 @@ export class RulezetEditor {
         if (update.selectionSet || update.docChanged) {
             this._renderCursor();
             this._highlightActiveRule();
+            if (this._fields.open && !this._fields.picked && update.selectionSet && !update.docChanged) {
+                const name = this._fieldRuleName();
+                if (name !== this._fields.shown) { this._fields.shown = name; this._renderFields(); }
+            }
         }
     }
 
@@ -1063,6 +1142,7 @@ export class RulezetEditor {
             this.pack.format ? btn('format', t('format'), () => this.format(), false, `${t('format')} (Shift+Alt+F)`) : '',
             this.pack.splitRules ? btn('outline', t('outline'), () => this.toggleOutline(), this._outlineOpen, `${t('outline')} (Ctrl+Shift+O)`) : '',
             btn('problems', t('problems'), () => this.toggleProblems(), this._problemsOpen, `${t('problems')} (Ctrl+Shift+M)`),
+            this._fieldsEnabled() ? btn('tag', t('fields'), () => this.toggleFields(), this._fields.open, t('fieldsHint')) : '',
             this._testsEnabled() ? btn('play', t('tests'), () => this.toggleTests(), this._test.open, `${t('tests')} (Ctrl+Shift+Enter: ${t('tRun').toLowerCase()})`) : '',
             h('span', { class: 'rze-toolbar-fill' }),
             ...(this.options.buttons || []).map(b => h('button', {
@@ -1126,6 +1206,265 @@ export class RulezetEditor {
         this.outlineEl.hidden = !this._outlineOpen;
         this._renderOutline();
         this._renderToolbar();
+    }
+
+    _fieldsEnabled() {
+        return this.options.fields !== false && !!this.pack.meta && !!(this.host && this.host.has && this.host.has('ruleFields'));
+    }
+
+    async _loadFieldDefs() {
+        const F = this._fields;
+        F.loading = true;
+        F.error = null;
+        this._renderFields();
+        try {
+            F.defs = (await this.host.ruleFields(this.pack.validateAs || this.pack.id)) || [];
+        } catch (e) {
+            F.defs = null;
+            F.error = e.message || String(e);
+        } finally {
+            F.loading = false;
+        }
+        for (const [name, values, opts] of F.pending || []) this.setFieldValues(name, values, opts);
+        F.pending = [];
+        this._renderFields();
+        this.events.emit('fields', this.getAllFieldValues());
+    }
+
+    _ruleEntries(name) {
+        if (name === DRAFT) return [];
+        return this.pack.meta ? this.pack.meta.entries(this.getModel(), name) : null;
+    }
+
+    /** First value typed with no rule in the document: the rule is created, named after the title
+     *  field when there is one, and every written field goes into it. Returns its name. */
+    _createRuleFromFields({ strings = true } = {}) {
+        const F = this._fields;
+        const meta = this.pack.meta;
+        if (!meta || !meta.skeleton) return null;
+        const draft = F.byRule.get(DRAFT);
+        const titleDef = F.defs.find(d => d.ruleName);
+        const fromTitle = titleDef && draft && meta.ruleName ? meta.ruleName(draft.values[titleDef.id]) : null;
+        const name = fromTitle || 'new_rule';
+        F.namedByPanel = F.namedByPanel || new Set();
+        F.namedByPanel.add(name);
+        const doc = this.view.state.doc;
+        this.view.dispatch({ changes: { from: doc.length, insert: (doc.length ? '\n' : '') + expandSnippetVars(meta.skeleton(name, { strings })) }, userEvent: 'input.fields' });
+        F.byRule.delete(DRAFT);
+        if (draft) {
+            F.byRule.set(name, draft);
+            for (const def of F.defs) if (draft.report[def.id] && !isEmpty(def, draft.values[def.id])) this._writeField(name, def, draft.values[def.id]);
+        }
+        return name;
+    }
+
+    /** Strings / condition edited in the panel: written into the rule (created first when there is none). */
+    _editBody(name, make) {
+        if (!name || !this.pack.body) return;
+        let target = name;
+        if (name === DRAFT) target = this._createRuleFromFields({ strings: false });   // the form adds the strings itself
+        if (!target) return;
+        if (this._locks.has(target)) { this._toast(this.t('lockedUnlockFirst', { name: target })); return; }
+        const changes = make(this.getModel(), target);
+        if (changes && changes.length) this.view.dispatch({ changes, userEvent: 'input.fields' });
+        this._renderFields();
+    }
+
+    /** The title field names the rule: renaming it keeps its field state. */
+    _renameFromTitle(name, title) {
+        const meta = this.pack.meta;
+        if (!meta || !meta.renameRule || !meta.ruleName || name === DRAFT || this._locks.has(name)) return name;
+        const next = meta.ruleName(title);
+        if (!next || next === name) return name;
+        const changes = meta.renameRule(this.getModel(), name, next);
+        if (!changes || changes.error) return name;
+        this.view.dispatch({ changes, userEvent: 'input.fields' });
+        const F = this._fields;
+        F.byRule.set(next, F.byRule.get(name));
+        F.byRule.delete(name);
+        F.namedByPanel = F.namedByPanel || new Set();
+        F.namedByPanel.delete(name);
+        F.namedByPanel.add(next);
+        if (F.picked === name) F.picked = next;
+        return next;
+    }
+
+    /** A rule's field state, created from what the rule holds the first time it is asked.
+     *  DRAFT: the values typed while the document has no rule yet. */
+    _fieldState(name, { force = false } = {}) {
+        const F = this._fields;
+        if (!F.defs || !name) return null;
+        if (name === DRAFT) {
+            if (!F.byRule.has(DRAFT)) F.byRule.set(DRAFT, initialState(F.defs, [], this.options.fieldsReport));
+            return F.byRule.get(DRAFT);
+        }
+        if (!F.byRule.has(name)) {
+            const entries = this._ruleEntries(name);
+            if (!entries && !force) return null;
+            F.byRule.set(name, initialState(F.defs, entries || [], this.options.fieldsReport, name));
+        }
+        return F.byRule.get(name);
+    }
+
+    /** The rule was edited by hand: fields written into it follow it; a removed key stops being written. */
+    _syncFieldsFromRule(name) {
+        const s = this._fieldState(name);
+        if (!s) return;
+        const entries = this._ruleEntries(name);
+        for (const def of this._fields.defs) {
+            if (!s.report[def.id]) continue;
+            const ruleValue = readField(def, entries);
+            if (ruleValue === null) {
+                if (!isEmpty(def, s.values[def.id]) && !this._fields.writing) s.report[def.id] = false;
+            } else if (!sameValue(def, s.values[def.id], ruleValue)) {
+                s.values[def.id] = ruleValue;
+            }
+        }
+    }
+
+    _writeField(name, def, value) {
+        if (!def.meta || !this.pack.meta) return;
+        if (this._locks.has(name)) { this._toast(this.t('lockedUnlockFirst', { name })); return; }
+        const model = this.getModel();
+        const changes = isEmpty(def, value)
+            ? this.pack.meta.remove(model, name, def.meta.key)
+            : this.pack.meta.set(model, name, def.meta.key, toMetaValue(def, value));
+        if (!changes || !changes.length) return;
+        this._fields.writing = true;
+        try {
+            this.view.dispatch({ changes, userEvent: 'input.fields' });
+        } finally {
+            this._fields.writing = false;
+        }
+    }
+
+    /** The title renames the rule only while the rule was born in the panel or still has the
+     *  default name: a rule pasted with its own name keeps it. */
+    _renamesRule(name) {
+        const F = this._fields;
+        F.namedByPanel = F.namedByPanel || new Set();
+        return name === 'new_rule' || F.namedByPanel.has(name);
+    }
+
+    _fieldsChanged(name) {
+        this._renderFields();
+        this.events.emit('fields', { rule: name, ...this.getFieldValues(name) });
+    }
+
+    _fieldRuleName() {
+        const F = this._fields;
+        const rules = this._rules || (this.pack.splitRules ? this.pack.splitRules(this.getModel()) : []);
+        if (!rules.length) return DRAFT;
+        if (F.picked && rules.some(r => r.name === F.picked)) return F.picked;
+        const head = this.view.state.selection.main.head;
+        const at = rules.find(r => head >= r.from && head <= r.to);
+        return at ? at.name : (rules.length === 1 ? rules[0].name : null);
+    }
+
+    _renderFields() {
+        const F = this._fields;
+        if (!F.open || !this.view) return;
+        const name = F.defs ? this._fieldRuleName() : null;
+        if (name) this._syncFieldsFromRule(name);
+        const state = name ? this._fieldState(name) : null;
+        const entries = name ? this._ruleEntries(name) : null;
+        const ruleValueOf = (def) => readField(def, entries);
+        const set = (fn) => { if (name && state) { fn(state); this._fieldsChanged(name); } };
+        renderFields(this.fieldsEl, {
+            defs: F.defs || [], rules: (this._rules || []).map(r => r.name), rule: state ? name : null, picked: F.picked,
+            draft: name === DRAFT, me: this.options.author || null,
+            body: this.pack.body ? (name === DRAFT ? { strings: [], condition: '' } : (name ? this.pack.body.read(this.getModel(), name) : null)) : null,
+            bodyModifiers: this.pack.body ? this.pack.body.modifiers : null,
+            state, locked: name ? this._locks.has(name) : false, loading: F.loading, error: F.error, suggest: F.suggest, ui: F.ui,
+            statusOf: (def) => fieldStatus(def, state, ruleValueOf(def)), ruleValueOf,
+        }, {
+            t: this.t,
+            onClose: () => this.toggleFields(false),
+            onPickRule: (n) => { F.picked = n || null; this._renderFields(); },
+            onValue: (def, value) => {
+                if (!name || !state) return;
+                state.values[def.id] = value;
+                state.keep[def.id] = false;
+                let target = name;
+                if (name === DRAFT) target = this._createRuleFromFields();
+                else {
+                    if (def.ruleName && this._renamesRule(name)) target = this._renameFromTitle(name, value);
+                    if (state.report[def.id]) this._writeField(target, def, value);
+                }
+                this._fieldsChanged(target || name);
+            },
+            onReport: (def, on) => set((s) => {
+                s.report[def.id] = on;
+                s.keep[def.id] = false;
+                if (!on) return;
+                const ruleValue = ruleValueOf(def);
+                if (isEmpty(def, s.values[def.id]) && ruleValue !== null) s.values[def.id] = ruleValue;
+                else this._writeField(name, def, s.values[def.id]);
+            }),
+            onResolve: (def, how) => set((s) => {
+                if (how === 'rule') { s.values[def.id] = ruleValueOf(def); s.keep[def.id] = false; }
+                else if (how === 'mine') { s.report[def.id] = true; s.keep[def.id] = false; this._writeField(name, def, s.values[def.id]); }
+                else if (how === 'keep') { s.keep[def.id] = true; s.report[def.id] = false; }
+                else if (how === 'undo') { s.keep[def.id] = false; }
+            }),
+            onSuggest: (def, query, opts = {}) => {
+                this._suggestField(def, query);
+                if (opts.focus) {
+                    const input = this.fieldsEl.querySelector(`[data-focus-key="${CSS.escape(opts.focus)}"]`);
+                    if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+                }
+            },
+            onString: (index, s) => this._editBody(name, (model, rule) => this.pack.body.setString(model, rule, index, s)),
+            onStringRemove: (index) => this._editBody(name, (model, rule) => this.pack.body.removeString(model, rule, index)),
+            onCondition: (text) => this._editBody(name, (model, rule) => this.pack.body.setCondition(model, rule, text)),
+            onFormats: (def) => { F.ui = { ...F.ui, formats: def ? def.id : null }; this._renderFields(); },
+            onSelect: (def, query = '', onlyIf = null) => {
+                if (onlyIf && F.ui.select !== onlyIf) return;
+                F.ui = { ...F.ui, select: def ? def.id : null, selectQuery: def ? query : '' };
+                this._renderFields();
+            },
+            onBrowse: (def, path, page = 1, label = null, append = false) => this._browseField(def, path, page, label, append),
+            onBrowseClose: () => { F.ui = { ...F.ui, browse: null }; this._renderFields(); },
+        });
+    }
+
+    /** One level of a field's folders (tag namespaces, ATT&CK tactics), from the host. */
+    async _browseField(def, path, page, label, append) {
+        const F = this._fields;
+        if (!(this.host && this.host.has('browse'))) return;
+        const prev = F.ui.browse && F.ui.browse.field === def.id ? F.ui.browse : null;
+        const labels = (prev ? prev.labels : []).slice(0, path.length);
+        if (label && path.length) labels[path.length - 1] = label;
+        const b = { field: def.id, path, labels, page, loading: true, error: null,
+                    data: append && prev ? prev.data : null };
+        F.ui = { ...F.ui, browse: b };
+        this._renderFields();
+        try {
+            const data = await this.host.browse(this.pack.validateAs || this.pack.id, def.id, path, page);
+            if (F.ui.browse !== b) return;
+            b.data = append && b.data
+                ? { folders: [...(b.data.folders || []), ...(data.folders || [])], items: [...(b.data.items || []), ...(data.items || [])], has_more: data.has_more }
+                : data;
+        } catch (e) {
+            b.error = e.message || String(e);
+        }
+        b.loading = false;
+        this._renderFields();
+    }
+
+    _suggestField(def, query, { focus = null } = {}) {
+        const F = this._fields;
+        clearTimeout(this._timers.suggest);
+        F.suggest = query ? { field: def.id, query, items: (F.suggest && F.suggest.field === def.id ? F.suggest.items : []) } : null;
+        this._renderFields();
+        if (!query || !def.suggest || !(this.host && this.host.has('suggest'))) return;
+        this._timers.suggest = setTimeout(async () => {
+            let items = [];
+            try { items = await this.host.suggest(this.pack.validateAs || this.pack.id, def.id, query) || []; } catch { items = []; }
+            if (!F.suggest || F.suggest.field !== def.id || F.suggest.query !== query) return;
+            F.suggest = { field: def.id, query, items: items.slice(0, 10) };
+            this._renderFields();
+        }, 200);
     }
 
     _testsEnabled() {
@@ -1314,6 +1653,7 @@ export class RulezetEditor {
             { id: 'validate', label: `Validate on ${this.host ? this.host.name : 'server'} now`, key: 'Ctrl+Enter', run: () => this.validate(), when: () => this._serverEnabled() },
             { id: 'nextProblem', label: 'Next problem', key: 'F8', run: () => nextDiagnostic(v) },
             { id: 'prevProblem', label: 'Previous problem', key: 'Shift+F8', run: () => previousDiagnostic(v) },
+            { id: 'fields', label: `Toggle ${t('fields').toLowerCase()} panel`, run: () => this.toggleFields(), when: () => this._fieldsEnabled() },
             { id: 'tests', label: `Toggle ${t('tests').toLowerCase()} panel`, run: () => this.toggleTests(), when: () => this._testsEnabled() },
             { id: 'runTest', label: `${t('tRun')}`, key: 'Ctrl+Shift+Enter', run: () => this.runTest(), when: () => this._testsEnabled() },
             { id: 'problems', label: `Toggle ${t('problems').toLowerCase()} panel`, key: 'Ctrl+Shift+M', run: () => this.toggleProblems() },

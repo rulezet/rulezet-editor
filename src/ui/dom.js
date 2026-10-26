@@ -47,6 +47,7 @@ export const ICONS = {
     tools: svg('<path d="M9.5 2.5a3 3 0 0 0 3.9 3.9L8 11.8 4.2 8z"/><path d="M5.5 9.5 2.5 12.5l1 1 3-3"/>'),
     plus: svg('<path d="M8 3v10M3 8h10"/>'),
     play: svg('<path d="M4.5 2.8v10.4L13 8z"/>'),
+    tag: svg('<path d="M2 2.5h5.5l6.5 6.5-5 5-6.5-6.5z"/><circle cx="5" cy="5.5" r="1"/>'),
 };
 
 export function icon(name, cls = '') {
