@@ -38,6 +38,7 @@ import { renderProblems } from '../ui/problems.js';
 import { renderTests } from '../ui/tests.js';
 import { renderFields } from '../ui/fields.js';
 import { resizable } from '../ui/resize.js';
+import { Tour } from '../ui/tour.js';
 import { emptyValue, fieldStatus, initialState, isEmpty, readField, sameValue, toMetaValue } from './fields.js';
 import { CommandPalette } from '../ui/palette.js';
 
@@ -67,6 +68,7 @@ const DEFAULTS = {
     fields: 'auto',              // Fields panel: 'auto' = when the pack has `meta` and the host has ruleFields; false = never
     fieldsReport: true,          // fields written into a rule built from the panel (empty document); a rule already
                                  // in the text never gets fields written into it unless the user ticks them
+    tutorial: true,              // a Tutorial button: a guided tour of every feature, with examples
     toast: null,                 // (message, tone) => void: show the editor's messages with the host's own notifications
     lockPasted: false,           // a pasted rule is locked (unlockable): fields can be filled, its text is kept as is
     fieldsOpen: true,            // the Fields panel is open when the editor starts (when it is available)
@@ -450,6 +452,114 @@ export class RulezetEditor {
         if (open && !this._fields.defs && !this._fields.loading) this._loadFieldDefs();
         this._renderFields();
         this._renderToolbar();
+    }
+
+    /** The guided tour of the editor's features (Tutorial button). */
+    openTutorial(index = 0) {
+        if (!this._tour) this._tour = new Tour(this.root, [], this.t, { onStep: () => { if (this.palette && this.palette.close) this.palette.close(); } });
+        this._tour.steps = this._tutorialSteps();
+        this._tour.start(index);
+    }
+
+    _tutorialSteps() {
+        const q = (sel) => () => this.root.querySelector(sel);
+        const btn = (label) => () => this.root.querySelector(`.rze-toolbar button[aria-label="${label}"]`);
+        const t = this.t;
+        const pack = this.pack;
+        const example = pack.sample || 'rule Example\n{\n    strings:\n        $a = "evil"\n    condition:\n        $a\n}';
+        const steps = [
+            { title: 'Welcome to the rule editor',
+              body: `An editor made for detection rules (${pack.name}): it checks your rules as you type, completes what you write, explains every keyword, and can test the rules on samples.\n\nThis tour shows each feature with an example. Use the arrows (← →) or the buttons; Esc closes it. Open it again any time with the Tutorial button.`,
+              try: { label: 'Load an example rule', run: () => { if (!this.getValue().trim()) this.setValue(example); else this.insertText('\n' + example + '\n', { at: this.view.state.doc.length }); } } },
+            { title: 'Write a rule', target: q('.cm-content'),
+              body: 'Type freely: keywords, strings, modules and rule names are coloured. Suggestions appear as you type; Ctrl+Space shows them at any time. Typing `rule` then Tab inserts a full template; `pe.` lists everything the pe module offers (it also adds `import "pe"` for you).',
+              example: 'rule Suspicious_Downloader\n{\n    strings:\n        $url = "http://" ascii wide\n        $api = "URLDownloadToFileA"\n    condition:\n        all of them\n}',
+              keys: [['Ctrl+Space', 'suggestions'], ['Tab', 'next placeholder of a template']],
+              try: pack.snippets ? { label: 'Insert a new rule', run: () => this.newRule() } : null },
+            { title: 'Errors while you type', target: q('.rze-status-counts'),
+              body: 'Mistakes are underlined at once (an undefined `$string`, a missing import, a wrong modifier, a string that is never used…). Hover the underline to read why; many come with a quick fix (lightbulb). The counters here open the Problems panel, every problem of the document grouped by rule.',
+              example: 'condition:\n    $missing      // ← "undefined string $missing"',
+              keys: [['F8 / Shift+F8', 'next / previous problem'], ['Ctrl+Shift+M', 'Problems panel']],
+              try: { label: 'Open the Problems panel', run: () => this.toggleProblems(true) } },
+            { title: 'Understand and navigate', target: q('.cm-content'),
+              body: 'Hover anything to get help: a keyword, a module function and its arguments, a `$string` (its bytes in hex), another rule. F12 or Ctrl+Click jumps to where a string or a rule is defined — even to a rule stored on the host. F2 renames a `$string` or a rule everywhere at once.',
+              keys: [['F12 / Ctrl+Click', 'go to definition'], ['F2', 'rename everywhere'], ['Ctrl+/', 'comment / uncomment']] },
+        ];
+        // the pack's worked example: a good rule built step by step, shown in the document
+        const tut = pack.tutorial;
+        if (tut && tut.stages) {
+            for (const stage of tut.stages) {
+                steps.push({ title: stage.title, target: q('.cm-content'), body: stage.body, example: stage.text,
+                             try: { label: 'Show it in the editor', run: () => this._showTutorialStage(tut.rule, stage.text) } });
+            }
+        }
+        if (pack.actions) steps.push({ title: 'Rule tools', target: btn(t('ruleTools')),
+            body: 'Common edits on the rule under the cursor, in one click: set the author, add today\'s date, an id, a tag, a string, a file-type check (PE, ELF…), and more.',
+            keys: [['Ctrl+Shift+R', 'rule tools']],
+            try: { label: 'Open the rule tools', run: () => this.openRuleTools() } });
+        if (pack.format) steps.push({ title: 'Format', target: btn(t('format')),
+            body: 'One clean layout for every rule: indentation, aligned `=` in strings, comments kept. Rules that still have errors are left untouched.',
+            keys: [['Shift+Alt+F', 'format the document']],
+            try: { label: 'Format the document', run: () => this.format() } });
+        if (pack.splitRules) steps.push({ title: 'Several rules: the Rules panel', target: btn(t('outline')),
+            body: 'A document can hold many rules. The Rules panel lists them with their status (errors, warnings), their strings and condition; click one to jump to it, filter by name or tag, copy a single rule.\n\nThe lock icon freezes a rule: its text can no longer change until you unlock it.',
+            keys: [['Ctrl+Shift+O', 'Rules panel and its filter']],
+            try: { label: 'Open the Rules panel', run: () => this.toggleOutline(true) } });
+        steps.push({ title: 'Locked rules', target: q('.rze-lockbar') ,
+            body: 'Some rules are locked, with a bar above them: a rule you pasted (its text is kept as pasted), a rule inserted from the host, the rules another rule depends on, or a rule you locked yourself. Typing inside is refused. "Unlock to edit" frees it when you are allowed to (your own rules, or as an admin).',
+            example: '🔒 Pasted rule: locked — fill its fields on the right, its text stays as pasted   [Unlock to edit]' });
+        if (this._fieldsEnabled()) {
+            steps.push({ title: 'Fields of the rule', target: btn(t('fields')),
+                body: 'The rule\'s metadata on the host: title, description, author, license, version, vulnerabilities, ATT&CK techniques, tags, linked rules. Each field can be written into the rule (a `meta:` key) — tick "Write into the rule" — or kept outside it, so the rule text stays untouched.\n\nValues the rule already holds fill the fields; when they differ you choose: use the rule\'s value, write yours, or keep both different on purpose.',
+                example: 'meta:\n    author = "you"            ← Author field (Me button)\n    cve = "CVE-2024-3094"     ← Vulnerabilities field',
+                try: { label: 'Open the Fields panel', run: () => this.toggleFields(true) } });
+            if (pack.body) steps.push({ title: 'Strings & condition as a form', target: () => this.fieldsEl.querySelector('.rze-body') || btn(t('fields'))(),
+                body: 'Below the fields, the strings and the condition can be edited as a form: each string (id, text / hex / regex, value, modifiers), and the condition as clauses joined by `and` / `or`. Ready-made clauses (any of them, PE file, filesize…) are added with one click. The form and the text stay in sync both ways.\n\nWith an empty document, filling the fields builds the rule for you; the title names it.',
+                try: { label: 'Show the form', run: () => { this.toggleFields(true); requestAnimationFrame(() => { const b = this.fieldsEl.querySelector('.rze-body'); if (b) b.scrollIntoView({ block: 'nearest' }); }); } } });
+        }
+        if (this._testsEnabled()) steps.push({ title: 'Test on samples', target: btn(t('tests')),
+            body: 'Run the document on sample sets in a sandbox and watch every sample turn into a verdict: detected, missed, false positive, clean. Open a sample to see each match in its surroundings; the strings that matched light up in the rule. Search and filter large runs.',
+            keys: [['Ctrl+Shift+Enter', 'run the tests']],
+            try: { label: 'Open the Test panel', run: () => this.toggleTests(true) } });
+        if (this._serverEnabled()) steps.push({ title: `Checked by ${this.host.name}`, target: q('.rze-status-server'),
+            body: `When you stop typing, the whole document is also compiled by ${this.host.name} (the real compiler, with the rules your rules depend on). Its answer shows here and as underlines.`,
+            keys: [['Ctrl+Enter', 'check now']],
+            try: { label: 'Check now', run: () => this.validate() } });
+        steps.push(
+            { title: 'Undo, search, commands', target: () => this.undoBtn,
+              body: 'Undo and redo any change (also the ones the panels make). Search and replace with regular expressions. The command palette lists every action of the editor with its shortcut.',
+              keys: [['Ctrl+Z / Ctrl+Shift+Z', 'undo / redo'], ['Ctrl+F', 'search and replace'], ['Ctrl+Shift+P or F1', 'command palette']],
+              try: { label: 'Open the command palette', run: () => this.openPalette() } },
+            { title: 'Your workspace', target: btn(t('fullscreen')),
+              body: 'Light or dark theme, line wrapping, full screen. Every panel can be resized with the mouse (drag its edge; double-click to reset), and so can the editor itself (drag the bar under it). Your choices are remembered.',
+              keys: [['Alt+Z', 'wrap lines'], ['Esc', 'leave full screen']] },
+            { title: 'All shortcuts', target: null,
+              body: 'That\'s it. The shortcuts below are also in the command palette.',
+              keys: [['Ctrl+Space', 'suggestions'], ['F12 / Ctrl+Click', 'definition'], ['F2', 'rename'], ['Shift+Alt+F', 'format'],
+                     ['Ctrl+Shift+R', 'rule tools'], ['Ctrl+Shift+O', 'Rules panel'], ['Ctrl+Shift+M', 'Problems'], ['Ctrl+Enter', 'check now'],
+                     ['Ctrl+Shift+Enter', 'run the tests'], ['Ctrl+S', 'save (the page decides)'], ['Ctrl+Shift+P', 'commands']] },
+        );
+        return steps;
+    }
+
+    /** A stage of the pack's worked example: replaces the example rule (or adds it); the other rules
+     *  of the document are left alone. The stage's imports go to the top when missing. */
+    _showTutorialStage(ruleName, text) {
+        const lines = text.split('\n');
+        const imports = lines.filter(l => /^\s*import\s+"/.test(l)).map(l => l.trim());
+        const body = lines.filter(l => !/^\s*import\s+"/.test(l)).join('\n').trim() + '\n';
+        if (this._locks.has(ruleName)) this.unlockRule(ruleName);
+        const current = this.getValue();
+        if (!current.trim()) { this.setValue((imports.length ? imports.join('\n') + '\n\n' : '') + body); this.goTo(0); return; }
+        const rule = (this.pack.splitRules ? this.pack.splitRules(this.getModel()) : []).find(r => r.name === ruleName);
+        const changes = rule
+            ? [{ from: rule.from, to: rule.to, insert: body.trimEnd() }]
+            : [{ from: current.length, to: current.length, insert: (current.endsWith('\n') ? '\n' : '\n\n') + body }];
+        const missing = imports.filter(i => !current.includes(i));
+        if (missing.length) changes.push({ from: 0, to: 0, insert: missing.join('\n') + '\n\n' });
+        this.view.dispatch({ changes, userEvent: 'input.tutorial' });
+        const placed = (this.pack.splitRules(this.getModel()).find(r => r.name === ruleName) || {}).from;
+        if (placed != null) this.goTo(placed);
     }
 
     /** Shows this rule in the Fields panel (null: the rule under the cursor). */
@@ -1183,6 +1293,7 @@ export class RulezetEditor {
             this._fieldsEnabled() ? btn('tag', t('fields'), () => this.toggleFields(), this._fields.open, t('fieldsHint')) : '',
             this._testsEnabled() ? btn('play', t('tests'), () => this.toggleTests(), this._test.open, `${t('tests')} (Ctrl+Shift+Enter: ${t('tRun').toLowerCase()})`) : '',
             h('span', { class: 'rze-toolbar-fill' }),
+            this.options.tutorial ? btn('help', t('tutorial'), () => this.openTutorial(), false, t('tutorialHint')) : '',
             ...(this.options.buttons || []).map(b => h('button', {
                 type: 'button', class: `rze-btn rze-host-btn${b.primary ? ' rze-btn-primary' : ''}`, title: b.title || b.label, 'aria-label': b.label,
                 disabled: this._hostButtonDisabled(b),

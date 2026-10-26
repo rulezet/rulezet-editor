@@ -152,3 +152,22 @@ test('rule tools: date, id, tag, string, PE check, private', () => {
     const ctx = { text: t, pos: 10, parsed: yara.parse(t) };
     assert.ok(yara.actions(ctx).find(a => a.id === 'yara.tag').run(ctx, '1bad').error);
 });
+
+test('the tutorial example: every stage is valid, the final rule has no warning', () => {
+    const stages = yara.tutorial.stages;
+    assert.ok(stages.length >= 4);
+    for (const s of stages) {
+        const errors = yara.lint(yara.parse(s.text), {}).filter(d => d.severity === 'error');
+        assert.deepEqual(errors.map(e => e.message), [], s.title);
+        assert.ok(s.text.includes(`rule ${yara.tutorial.rule}`), s.title);
+    }
+    const last = stages[stages.length - 1].text;
+    assert.deepEqual(yara.lint(yara.parse(last), {}).filter(d => d.severity !== 'hint').map(d => d.message), []);
+});
+
+test('the tutorial example never leaves an unused import behind', () => {
+    for (const s of yara.tutorial.stages) {
+        const warns = yara.lint(yara.parse(s.text), {}).filter(d => /import/i.test(d.message));
+        assert.deepEqual(warns.map(w => w.message), [], s.title);
+    }
+});

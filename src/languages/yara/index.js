@@ -11,6 +11,7 @@ import { actions, setMeta } from './actions.js';
 import { stream } from './highlight.js';
 import { conditionRefs } from './analysis.js';
 import { MODULES } from './modules.js';
+import { TUTORIAL } from './tutorial.js';
 
 const SAMPLE = `import "pe"
 
@@ -49,6 +50,7 @@ export default {
     comments: { line: '//', block: ['/*', '*/'] },
     indentUnit: '    ',
     snippets: TOP_SNIPPETS,
+    tutorial: TUTORIAL,            // "A complete example" chapter of the editor's tutorial
     actions,
     modules: MODULES,
 

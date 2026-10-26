@@ -1,7 +1,8 @@
 /** UI strings. Add a locale by adding a key; missing entries fall back to English. */
 const STRINGS = {
     en: {
-        undo: 'Undo', redo: 'Redo', pasted: 'pasted', lockRule: 'Lock', lockRuleHint: 'Lock this rule: its text can no longer be changed (until you unlock it)',
+        undo: 'Undo', redo: 'Redo', tutorial: 'Tutorial', tutorialHint: 'A guided tour of every feature, with examples',
+        tourNext: 'Next', tourBack: 'Back', tourDone: 'Done', tourClose: 'Close the tour', pasted: 'pasted', lockRule: 'Lock', lockRuleHint: 'Lock this rule: its text can no longer be changed (until you unlock it)',
         unlockRule: 'Unlock this rule', lockedByYou: 'you', lockedManual: 'Locked by you — its text is kept as is', unlockManualHint: 'Edit this rule again',
         lockedPasted: 'Pasted rule: locked — fill its fields on the right, its text stays as pasted',
         unlockPastedHint: 'Edit the rule text itself (and let the Fields panel write into it)', format: 'Format', outline: 'Rules', problems: 'Problems', palette: 'Commands', theme: 'Theme',

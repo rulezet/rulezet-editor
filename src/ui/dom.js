@@ -48,6 +48,7 @@ export const ICONS = {
     plus: svg('<path d="M8 3v10M3 8h10"/>'),
     undo: svg('<path d="M5.5 4.5 2.5 7.5l3 3"/><path d="M2.5 7.5h7a4 4 0 0 1 0 8H8"/>'),
     redo: svg('<path d="M10.5 4.5l3 3-3 3"/><path d="M13.5 7.5h-7a4 4 0 0 0 0 8H8"/>'),
+    help: svg('<circle cx="8" cy="8" r="6.5"/><path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.4M8 11.6v.1"/>'),
     play: svg('<path d="M4.5 2.8v10.4L13 8z"/>'),
     tag: svg('<path d="M2 2.5h5.5l6.5 6.5-5 5-6.5-6.5z"/><circle cx="5" cy="5.5" r="1"/>'),
 };

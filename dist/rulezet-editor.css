@@ -654,3 +654,24 @@ button.rze-status-item:hover { background: var(--rze-active-line); color: var(--
 body.rze-resizing { user-select: none; }
 body.rze-resizing-x, body.rze-resizing-x * { cursor: col-resize !important; }
 body.rze-resizing-y, body.rze-resizing-y * { cursor: row-resize !important; }
+
+/* guided tour (src/ui/tour.js) */
+.rze { position: relative; }
+.rze-tour { position: absolute; inset: 0; z-index: 40; }
+.rze-tour-spot { position: absolute; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .55); outline: 2px solid var(--rze-accent); transition: all .2s ease; pointer-events: none; }
+.rze-tour-card { position: absolute; width: min(400px, calc(100% - 24px)); max-height: calc(100% - 16px); overflow: auto; background: var(--rze-bg); color: var(--rze-fg); border: 1px solid var(--rze-border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0, 0, 0, .3); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; transition: left .2s ease, top .2s ease; }
+.rze-tour-head { display: flex; align-items: center; gap: 8px; }
+.rze-tour-head strong { font-size: 14px; }
+.rze-tour-head .rze-icon-btn { margin-left: auto; }
+.rze-tour-count { font-size: 11px; color: var(--rze-muted); white-space: nowrap; }
+.rze-tour-body p { margin: 0 0 6px; line-height: 1.5; }
+.rze-tour-body code, .rze-tour-keys kbd { font-family: var(--rze-font); font-size: 11.5px; background: var(--rze-active-line); border-radius: 3px; padding: 0 4px; }
+.rze-tour-example { max-height: 190px; margin: 0; padding: 8px 10px; background: var(--rze-panel-bg); border: 1px solid var(--rze-border); border-radius: 6px; font-family: var(--rze-font); font-size: 12px; white-space: pre; overflow: auto; }
+.rze-tour-keys { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 12px; }
+.rze-tour-keys > div { display: contents; }
+.rze-tour-keys kbd { border: 1px solid var(--rze-border); white-space: nowrap; justify-self: start; }
+.rze-tour-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rze-tour-dots { display: flex; gap: 3px; flex-wrap: wrap; max-width: 150px; }
+.rze-tour-dot { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%; background: var(--rze-border); cursor: pointer; }
+.rze-tour-dot.rze-on { background: var(--rze-accent); }
+.rze-tour-try { color: var(--rze-accent); border: 1px solid var(--rze-accent); }
