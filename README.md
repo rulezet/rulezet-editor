@@ -12,6 +12,9 @@ editor runs in any web page, in MISP, in an internal SOC tool or in a VS Code we
 > Status: 0.1.0, first working version with the YARA language pack.
 > Architecture: [docs/design.md](docs/design.md). How it works inside, step by step: [docs/how-it-works.md](docs/how-it-works.md).
 
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/9fcec851-0016-4d79-834a-3b2893180acf" />
+
+
 ## Try it
 
 ```bash
