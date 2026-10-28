@@ -2,6 +2,7 @@
  * YARA language pack for rulezet-editor.
  * Pure data and functions: no network, no DOM, no editor engine import.
  */
+import { evaluate, inputBytes } from './debug.js';
 import { parse } from './parser.js';
 import { lint, DEFAULT_LINT_OPTIONS } from './lint.js';
 import { complete, TOP_SNIPPETS } from './completion.js';
@@ -51,6 +52,7 @@ export default {
     indentUnit: '    ',
     snippets: TOP_SNIPPETS,
     tutorial: TUTORIAL,            // "A complete example" chapter of the editor's tutorial
+    debug: { evaluate, inputBytes },   // Try panel: one rule on a small sample, in the browser
     actions,
     modules: MODULES,
 

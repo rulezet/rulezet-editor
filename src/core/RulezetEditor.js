@@ -36,6 +36,7 @@ import { h, icon } from '../ui/dom.js';
 import { renderOutline } from '../ui/outline.js';
 import { renderProblems } from '../ui/problems.js';
 import { renderTests } from '../ui/tests.js';
+import { renderTry } from '../ui/try.js';
 import { renderFields } from '../ui/fields.js';
 import { resizable } from '../ui/resize.js';
 import { Tour } from '../ui/tour.js';
@@ -112,6 +113,7 @@ export class RulezetEditor {
         this._serverState = this._serverEnabled() ? 'idle' : 'off';
         this._externals = new Map();
         this._test = { open: false, sets: null, chosen: new Set(), expanded: new Set(), focus: null, query: '', filter: 'all', limits: {}, run: null, error: null, loading: false, starting: false, text: null, stale: false };
+        this._try = { open: false, mode: 'text', input: '', rule: null, result: null, error: null };
         this._fields = { open: false, defs: null, loading: false, error: null, byRule: new Map(), picked: null, suggest: null, ui: {} };
         this._timers = {};
         this._destroyed = false;
@@ -397,6 +399,47 @@ export class RulezetEditor {
 
     toggleOutline(force) { this._setOutlineOpen(force ?? !this._outlineOpen); }
     toggleProblems(force) { this._setProblemsOpen(force ?? !this._problemsOpen); }
+
+    // ── Try: one rule on a small sample, in the browser (pack.debug) ──
+
+    /** Open / close the Try panel: a sample typed or pasted, the strings' matches, the condition as a tree. */
+    toggleTry(force) {
+        const open = !!(force ?? !this._try.open) && !!this.pack.debug;
+        this._try.open = open;
+        this.tryEl.hidden = !open;
+        if (open) this._runTry();
+        this._renderToolbar();
+    }
+
+    _runTry() {
+        const T = this._try;
+        if (!T.open || !this.pack.debug) return;
+        clearTimeout(this._timers.try);
+        T.error = null;
+        const input = this.pack.debug.inputBytes(T.input, T.mode);
+        const model = this.getModel();
+        const names = (model.rules || []).map(r => r.name).filter(Boolean);
+        const rule = T.rule && names.includes(T.rule) ? T.rule : this._ruleNameAtCursor() || names[0] || null;
+        if (input.error) { T.error = input.error; T.result = null; }
+        else {
+            try { T.result = rule ? this.pack.debug.evaluate(model, rule, input.bytes) : null; }
+            catch (e) { T.result = null; T.error = e.message || String(e); }
+        }
+        renderTry(this.tryEl, { ...T, rules: names }, {
+            t: this.t,
+            onClose: () => this.toggleTry(false),
+            onMode: (m) => { T.mode = m; this._runTry(); },
+            onRule: (n) => { T.rule = n; this._runTry(); },
+            onInput: (v) => { T.input = v; clearTimeout(this._timers.try); this._timers.try = setTimeout(() => this._runTry(), 200); },
+            onGoto: (pos) => { this.view.dispatch({ selection: { anchor: pos }, scrollIntoView: true }); this.view.focus(); },
+        });
+    }
+
+    _ruleNameAtCursor() {
+        const pos = this.view.state.selection.main.head;
+        const r = (this.getModel().rules || []).find(x => pos >= x.from && pos <= x.to);
+        return r ? r.name : null;
+    }
 
     // ── tests on samples (host: rulezet-tester) ──
 
@@ -718,13 +761,14 @@ export class RulezetEditor {
         this.fieldsEl = h('aside', { class: 'rze-fields', 'aria-label': t('fields'), hidden: true });
         this.problemsEl = h('div', { class: 'rze-problems', 'aria-label': t('problems') });
         this.testsEl = h('div', { class: 'rze-tests', 'aria-label': t('tests'), hidden: true });
+        this.tryEl = h('div', { class: 'rze-tests rze-try', 'aria-label': t('try'), hidden: true });
         this.statusEl = h('div', { class: 'rze-status' });
         this.toastEl = h('div', { class: 'rze-toast', role: 'status', 'aria-live': 'polite' });
 
         const main = h('div', { class: 'rze-main' }, this.editorEl, this.outlineEl, this.fieldsEl);
         this.root.append(
             this.options.toolbar ? this.toolbarEl : '',
-            this.bannerEl, main, this.problemsEl, this.testsEl,
+            this.bannerEl, main, this.problemsEl, this.tryEl, this.testsEl,
             this.options.statusBar ? this.statusEl : '',
             this.toastEl,
         );
@@ -742,6 +786,7 @@ export class RulezetEditor {
         resizable(this.fieldsEl, { axis: 'x', key: 'fields', min: 240, max: half });
         resizable(this.problemsEl, { axis: 'y', key: 'problems', min: 80, max: tall });
         resizable(this.testsEl, { axis: 'y', key: 'tests', min: 140, max: tall });
+        resizable(this.tryEl, { axis: 'y', key: 'try', min: 140, max: tall });
         resizable(this.root, { axis: 'y', side: 'after', key: 'editor', min: 260, max: () => window.innerHeight * 3,
             onResize: () => this.view && this.view.requestMeasure() });
         this._renderToolbar();
@@ -793,6 +838,7 @@ export class RulezetEditor {
                 { key: 'Mod-Shift-m', run: () => { this.toggleProblems(); return true; }, preventDefault: true },
                 { key: 'Mod-Shift-o', run: () => { this.toggleOutline(true); this._focusOutlineFilter(); return true; }, preventDefault: true },
                 { key: 'Mod-Enter', run: () => { this.validate(); return true; } },
+                { key: 'Mod-Shift-y', run: () => { if (!this.pack.debug) return false; this.toggleTry(); return true; }, preventDefault: true },
                 { key: 'Mod-Shift-Enter', run: () => { if (!this._testsEnabled()) return false; this.runTest(); return true; }, preventDefault: true },
                 { key: 'Mod-Shift-r', run: () => { this.openRuleTools(); return true; }, preventDefault: true },
                 { key: 'Alt-z', run: () => { this.toggleLineWrapping(); return true; }, preventDefault: true },
@@ -1225,6 +1271,10 @@ export class RulezetEditor {
             }
             if (pasted.length) queueMicrotask(() => this._lockPasted(pasted));
         }
+        if (update.docChanged && this._try.open) {
+            clearTimeout(this._timers.try);
+            this._timers.try = setTimeout(() => this._runTry(), 300);
+        }
         if (update.selectionSet || update.docChanged) {
             this._renderCursor();
             this._highlightActiveRule();
@@ -1288,6 +1338,7 @@ export class RulezetEditor {
             h('span', { class: 'rze-toolbar-sep' }),
             this.pack.snippets ? btn('plus', 'New rule', () => this.newRule()) : '',
             this.pack.actions ? btn('tools', t('ruleTools'), () => this.openRuleTools(), false, `${t('ruleTools')} (Ctrl+Shift+R)`) : '',
+            this.pack.debug ? btn('search', t('try'), () => this.toggleTry(), this._try.open, `${t('tryTitle')} (Ctrl+Shift+Y)`) : '',
             this.pack.format ? btn('format', t('format'), () => this.format(), false, `${t('format')} (Shift+Alt+F)`) : '',
             this.pack.splitRules ? btn('outline', t('outline'), () => this.toggleOutline(), this._outlineOpen, `${t('outline')} (Ctrl+Shift+O)`) : '',
             btn('problems', t('problems'), () => this.toggleProblems(), this._problemsOpen, `${t('problems')} (Ctrl+Shift+M)`),
