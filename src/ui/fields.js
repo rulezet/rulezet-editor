@@ -260,7 +260,10 @@ function listEditor(def, items, view, cb, id) {
         def.free !== false && def.pattern ? h('button', { type: 'button', class: `rze-field-add${typedValid ? ' rze-on' : ''}`,
             disabled: !typedValid, 'aria-label': t('fAdd'), onclick: addTyped }, '+') : '',
         def.browse ? h('button', { type: 'button', class: `rze-field-browse-btn${ui.browse && ui.browse.field === def.id ? ' rze-on' : ''}`,
-            title: t('fBrowse'), onclick: () => (ui.browse && ui.browse.field === def.id) ? cb.onBrowseClose() : cb.onBrowse(def, []) }, '☰') : '')];
+            title: t('fBrowse'), onclick: () => (ui.browse && ui.browse.field === def.id) ? cb.onBrowseClose() : cb.onBrowse(def, []) }, '☰') : '',
+        // a host picker (Rulezet: its rule list with filters, in a modal) for fields marked "picker"
+        def.picker && cb.canPick ? h('button', { type: 'button', class: 'rze-field-pick-btn', title: t('fPick'),
+            onclick: async () => { const next = await cb.onPick(def, items); if (next) cb.onValue(def, next); } }, icon('search'), h('span', { text: t('fPickLabel') })) : '')];
 
     // live feedback, as the vulnerability picker does
     if (def.pattern && def.free !== false && typed.length > 2) {
@@ -276,6 +279,14 @@ function listEditor(def, items, view, cb, id) {
                s.detail ? h('small', { text: s.detail }) : ''))));
     }
     if (ui.browse && ui.browse.field === def.id) parts.push(browsePane(def, ui.browse, items, add, view, cb));
+    // fields whose items are rules of the host ("insertable"): put them in the document, locked
+    if (def.insertable && cb.canInsert && items.length) {
+        const missing = items.filter(i => !(view.docRules || []).includes(String(i.label ?? i.value)));
+        parts.push(h('div', { class: 'rze-field-insert' },
+            h('button', { type: 'button', class: 'rze-btn rze-field-insert-btn', disabled: !missing.length,
+                title: t('fInsertHint'), onclick: () => cb.onInsertItems(def, missing) },
+                icon('lock'), h('span', { text: missing.length ? t('fInsertItems', { n: missing.length }) : t('fInsertDone') }))));
+    }
     return h('div', { class: 'rze-field-list' }, ...parts);
 }
 

@@ -1536,6 +1536,7 @@ export class RulezetEditor {
         const set = (fn) => { if (name && state) { fn(state); this._fieldsChanged(name); } };
         renderFields(this.fieldsEl, {
             defs: F.defs || [], rules: (this._rules || []).map(r => r.name), rule: state ? name : null, picked: F.picked,
+            docRules: (this._rules || []).map(r => r.name),
             draft: name === DRAFT, me: this.options.author || null,
             body: this.pack.body ? (name === DRAFT ? { strings: [], condition: '' } : (name ? this.pack.body.read(this.getModel(), name) : null)) : null,
             bodyModifiers: this.pack.body ? this.pack.body.modifiers : null,
@@ -1593,6 +1594,10 @@ export class RulezetEditor {
                 this._renderFields();
             },
             onBrowse: (def, path, page = 1, label = null, append = false) => this._browseField(def, path, page, label, append),
+            canPick: typeof this.options.pickValues === 'function',
+            canInsert: !!(this.host && this.host.has && this.host.has('getRule')),
+            onInsertItems: (def, items) => this._insertFieldRules(def, items),
+            onPick: (def, items) => this._pickValues(def, items),
             onBrowseClose: () => { F.ui = { ...F.ui, browse: null }; this._renderFields(); },
         });
     }
@@ -1634,6 +1639,45 @@ export class RulezetEditor {
             F.suggest = { field: def.id, query, items: items.slice(0, 10) };
             this._renderFields();
         }, 200);
+    }
+
+    /** "Add to the document" under a field of host rules (Linked rules): each one fetched from the
+     * host and inserted locked (unlockable by who may edit it), its imports gathered at the top.
+     * Rules of another format, or not found, are skipped with a message. */
+    async _insertFieldRules(def, items) {
+        // bounded: a field never pulls a whole collection into the document
+        const perClick = def.insertMax || 10;
+        const room = Math.max(0, (def.insertTotalMax || 30) - this._locks.size);
+        const allowed = Math.min(perClick, room);
+        if (!allowed) { this._toast(this.t('fInsertFull', { n: def.insertTotalMax || 30 }), 'warning'); return; }
+        if (items.length > allowed) this._toast(this.t('fInsertCapped', { n: allowed }), 'warning');
+        let added = 0;
+        const skipped = [];
+        for (const item of items.slice(0, allowed)) {
+            const name = String(item.label ?? item.value);
+            if ((this.getModel().rules || []).some(r => r.name === name)) continue;
+            let rule = null;
+            try { rule = await this.host.getRule(this.pack.validateAs || this.pack.id, name); } catch { rule = null; }
+            if (!rule || !rule.content) { skipped.push(name); continue; }
+            this._insertExternal(rule, -1);
+            added += 1;
+        }
+        if (skipped.length) this._toast(this.t('fInsertSkipped', { names: skipped.join(', ') }), 'warning');
+        if (added) this._renderFields();
+    }
+
+    /** The host's own picker for a field (options.pickValues(def, items) -> the new list or null):
+     * the items the user keeps stay as they were (their relation kind…), new ones get the default.
+     * Returns the new list (the Fields panel stores it like a typed value), or null: unchanged. */
+    async _pickValues(def, items) {
+        let picked = null;
+        try { picked = await this.options.pickValues(def, items); } catch { picked = null; }
+        if (!Array.isArray(picked)) return null;
+        const byValue = new Map(items.map(i => [String(i.value), i]));
+        let next = picked.map(p => byValue.get(String(p.value))
+            || (def.kinds ? { ...p, kind: p.kind || def.kinds[0].value } : p));
+        if (def.max) next = next.slice(0, def.max);
+        return next;
     }
 
     _testsEnabled() {
