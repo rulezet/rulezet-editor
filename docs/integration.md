@@ -138,6 +138,8 @@ Without any server at all, `RulezetHost` calls the public Rulezet API straight f
 | `fieldsReport` | `true` | fields written into the rule by default (a field definition's `report` wins); `false` on an edit page |
 | `tests` | `'auto'` | Test panel when the pack has `test` and the host has `startTest`; `false` hides it ([rulezet/testing.md](rulezet/testing.md)) |
 | `testPollMs` | `700` | how often a running test is polled |
+| `pickValues` | `null` | `(fieldDef, items) => Promise<items[] \| null>`: the host's own picker for fields marked `"picker": true` (a Browse button on the field). Rulezet: its rule list in a modal for "Linked rules" ([rulezet/fields.md](rulezet/fields.md)) |
+| `credits` | `null` | the host's section of the "Credits & licences" page (Markdown), shown with the pack's and the editor's own |
 | `lineWrapping` | `null` | wrap long lines (line numbers stay the real ones); `null` = the viewer's last choice, off by default. Toolbar button, Alt+Z, `setLineWrapping(on)` |
 
 ## Methods and events

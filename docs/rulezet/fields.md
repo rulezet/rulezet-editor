@@ -35,6 +35,17 @@ All panels (Rules, Fields, Problems, Test) and the editor itself are resizable w
 Why "outside the rule" matters: in Rulezet, editing a rule's text stops its automatic updates
 (e.g. from GitHub). A field kept outside lets the user enrich the rule without touching it.
 
+## Linked rules: Browse and add to the document
+
+A field marked `"picker": true` gets a **Browse** button when the host gives `options.pickValues`:
+Rulezet opens its full rule list (filters, search, pagination) in a modal (`static/js/rule_relation/rulePicker.js`,
+`pickRules()`); the rules already linked are ticked, **Done** hands the choice back, kept items keep
+their relation kind. A field marked `"insertable": true` gets **Add N to the document (locked)**:
+each linked rule is fetched (`host.getRule`) and inserted at the top, locked like a dependency
+(unlockable by its owner or an admin); rules of another format are skipped with a message. Bounded
+by `insertMax` per click (10) and `insertTotalMax` locked rules in the document (30), both in the
+field definition (Rulezet: setting `editor.rule_fields`).
+
 ## Contract
 
 - Host: `ruleFields(language)` → field definitions; `suggest(language, field, query)` →

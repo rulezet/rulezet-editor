@@ -41,6 +41,9 @@ RULEZET_URL=https://rulezet.org npm run dev
 | Tutorial | a guided tour (Tutorial button): each feature highlighted, explained with an example, most with a "Try it" button; only the features the page offers |
 | Fields | the host's fields for each rule (title, CVE, ATT&CK, tags…), each written into the rule (`meta:`) or kept outside it; values read back from the rule, differences shown and decided |
 | Tests | Test panel: run the rules on sample sets (rulezet-tester), live verdict per sample, false positives, click a hit to select the string |
+| Try | Try panel (Ctrl+Shift+Y): paste a sample (text or hex) and see, in the browser, which strings match and where, and the condition step by step with each value |
+| Templates | 25 complete rules to start from (Windows, Linux / macOS / Android, documents, scripts and webshells, ransomware, C2, hack tools, exploits, hunting…), YARA Style Guide structure, each one checked against libyara |
+| Credits | Credits & licences page (ⓘ button): the editor's, the language pack's and the host's, in Markdown |
 | Editor | folding per rule and section, multi-cursor, find / replace, command palette (Ctrl+Shift+P), light / dark / auto theme, full screen, drafts kept in the browser, English / French UI |
 
 ## Use it in a page
@@ -79,6 +82,7 @@ With Vue 3: `createVueComponent(Vue)` returns a `v-model` component. Details in
 | F8 / Shift+F8 | next / previous problem |
 | Ctrl+Enter | validate on the server now |
 | Ctrl+Shift+Enter | run the tests |
+| Ctrl+Shift+Y | Try panel (a sample, strings and condition explained) |
 | Ctrl+S | `save` event for the host page |
 | Ctrl+/ | toggle comment |
 

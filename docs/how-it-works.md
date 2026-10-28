@@ -246,6 +246,22 @@ from *pending* to a verdict one after the other. `pack.test.hitLabel` writes a h
 (`$lic at 0x14`), `pack.test.locate` finds the matched string in the current model for the
 click. Changing the text marks the results as stale. Details: [rulezet/testing.md](rulezet/testing.md).
 
+### 3.10 Try, templates, credits
+
+- **Try** (`src/ui/try.js`, `src/languages/yara/debug.js`): the sample typed in the panel becomes
+  bytes (`pack.debug.inputBytes`), `pack.debug.evaluate(model, rule, bytes)` matches every string
+  (text with its modifiers, hex with wildcards / jumps / alternatives, regex with the browser's
+  engine) and walks the condition's tokens with three-valued logic (`null` = cannot be decided on a
+  sample: modules, other rules, `for`, base64). Re-run 300 ms after each change of the document or
+  200 ms after typing in the sample. Nothing leaves the browser. Details: [rulezet/try.md](rulezet/try.md).
+- **Templates** (`src/ui/templates.js`, `src/languages/yara/templates.js`): a gallery overlay;
+  `insertTemplate(tpl)` adds the missing imports at the top, then inserts the snippet at the end
+  with CodeMirror's snippet engine (Tab between placeholders). `test/templates.test.js` compiles
+  every template with libyara. Details: [rulezet/templates.md](rulezet/templates.md).
+- **Credits** (`openCredits()`, `src/ui/markdown.js`): `pack.credits`, `options.credits` and the
+  editor's own `CORE_CREDITS` rendered by a small Markdown renderer that builds DOM nodes (no HTML
+  is ever parsed). Details: [rulezet/credits.md](rulezet/credits.md).
+
 ## 4. The YARA pack
 
 `src/languages/yara/index.js` assembles the pack from files that each do one thing:

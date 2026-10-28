@@ -37,6 +37,9 @@ import { renderOutline } from '../ui/outline.js';
 import { renderProblems } from '../ui/problems.js';
 import { renderTests } from '../ui/tests.js';
 import { renderTry } from '../ui/try.js';
+import { TemplateGallery } from '../ui/templates.js';
+import { markdown } from '../ui/markdown.js';
+import { CORE_CREDITS } from './credits.js';
 import { renderFields } from '../ui/fields.js';
 import { resizable } from '../ui/resize.js';
 import { Tour } from '../ui/tour.js';
@@ -237,6 +240,57 @@ export class RulezetEditor {
         snippetCompletion(expandSnippetVars(snippet.snippet), { label: snippet.label }).apply(this.view, snippet, pos, pos);
         this.view.dispatch({ scrollIntoView: true });
         this.view.focus();
+    }
+
+    /** Credits & licences: the editor's own, the language pack's (pack.credits), the host's
+     * (options.credits) — Markdown pages in one overlay. Esc or the backdrop closes it. */
+    openCredits() {
+        const t = this.t;
+        const sections = [this.pack.credits, this.options.credits, CORE_CREDITS].filter(Boolean);
+        const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey, true); };
+        const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+        const overlay = h('div', { class: 'rze-gallery rze-credits', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('credits'),
+                                   onmousedown: e => { if (e.target === overlay) close(); } },
+            h('div', { class: 'rze-gallery-box rze-credits-box' },
+                h('div', { class: 'rze-gallery-head' }, h('strong', {}, icon('info'), ' ', t('creditsTitle')),
+                    h('span', { class: 'rze-gallery-sub', text: this.pack.name }), h('span', { class: 'rze-toolbar-fill' }),
+                    h('button', { type: 'button', class: 'rze-icon-btn', 'aria-label': 'Close', onclick: close }, icon('close'))),
+                h('div', { class: 'rze-credits-body' }, ...sections.map(md => markdown(md)))));
+        this.root.appendChild(overlay);
+        document.addEventListener('keydown', onKey, true);
+    }
+
+    /** "New rule from template": the pack's template gallery; the chosen one is inserted. */
+    openTemplates() {
+        if (!this.pack.templates || !this.pack.templates.length || this.options.readOnly) return;
+        this.gallery.open(this.pack.templates, (tpl) => this.insertTemplate(tpl));
+    }
+
+    /** Inserts a template at the end of the document, ready to fill (Tab moves between its
+     * placeholders); the imports it needs go to the top, once. */
+    insertTemplate(tpl) {
+        if (!tpl || this.options.readOnly) return;
+        const lines = tpl.snippet.split('\n');
+        const body = lines.filter(l => !/^\s*import\s+"/.test(l)).join('\n').replace(/^\n+/, '');
+        const wanted = [...new Set([...(tpl.imports || []),
+            ...lines.map(l => (l.match(/^\s*import\s+"(\w+)"/) || [])[1]).filter(Boolean)])];
+        const model = this.getModel();
+        const have = new Set((model.imports || []).map(i => i.name));
+        const missing = wanted.filter(m => !have.has(m));
+        if (missing.length) {
+            const last = (model.imports || [])[model.imports.length - 1];
+            const pos = last ? this.view.state.doc.lineAt(last.to).to : 0;
+            const text = missing.map(m => `import "${m}"`).join('\n');
+            this.view.dispatch({ changes: { from: pos, insert: last ? '\n' + text : text + '\n\n' } });
+        }
+        const doc = this.view.state.doc;
+        const sep = doc.length === 0 ? '' : doc.toString().endsWith('\n\n') ? '' : doc.toString().endsWith('\n') ? '\n' : '\n\n';
+        this.view.dispatch({ changes: { from: doc.length, insert: sep }, selection: { anchor: doc.length + sep.length } });
+        const pos = this.view.state.doc.length;
+        snippetCompletion(expandSnippetVars(body.replace(/\n+$/, '')), { label: tpl.label }).apply(this.view, { label: tpl.label }, pos, pos);
+        this.view.dispatch({ scrollIntoView: true });
+        this.view.focus();
+        this.events.emit('template', tpl.id);
     }
 
     setTheme(theme) {
@@ -525,6 +579,14 @@ export class RulezetEditor {
               example: 'condition:\n    $missing      // ← "undefined string $missing"',
               keys: [['F8 / Shift+F8', 'next / previous problem'], ['Ctrl+Shift+M', 'Problems panel']],
               try: { label: 'Open the Problems panel', run: () => this.toggleProblems(true) } },
+            ...(pack.templates && pack.templates.length ? [{ title: 'Start from a template', target: btn(t('templates')),
+              body: `${pack.templates.length} complete starting points, by threat and file type: Windows malware (PE, DLL, .NET, packed, shellcode), Linux / macOS / Android, documents (Office macros, PDF, RTF, LNK), scripts and webshells, ransomware, C2 configuration, hack tools, exploits of a CVE, hunting rules… Each one follows the YARA Style Guide: $x strings are enough alone, $s strings count together, $a check the file type, $fp exclude false positives; cheap checks first in the condition.\n\nPick one, Insert, then Tab from one placeholder to the next.`,
+              try: { label: 'Open the templates', run: () => this.openTemplates() } }] : []),
+            ...(pack.debug ? [{ title: 'Try the rule on a sample', target: btn(t('try')),
+              body: 'Paste a sample (text, or hex bytes) and see, right here in the browser, which strings match and where, and the condition step by step: every and / or / not / N of… with its value. What a sample cannot decide (pe.…, other rules, for loops) shows "?". Nothing is sent anywhere.',
+              example: 'condition:  uint16(0) == 0x5A4D  and  2 of ($s*)\n            true (0x5A4D)          false (1 of 3 found, 2 needed)',
+              keys: [['Ctrl+Shift+Y', 'Try panel']],
+              try: { label: 'Open the Try panel', run: () => this.toggleTry(true) } }] : []),
             { title: 'Understand and navigate', target: q('.cm-content'),
               body: 'Hover anything to get help: a keyword, a module function and its arguments, a `$string` (its bytes in hex), another rule. F12 or Ctrl+Click jumps to where a string or a rule is defined — even to a rule stored on the host. F2 renames a `$string` or a rule everywhere at once.',
               keys: [['F12 / Ctrl+Click', 'go to definition'], ['F2', 'rename everywhere'], ['Ctrl+/', 'comment / uncomment']] },
@@ -778,6 +840,7 @@ export class RulezetEditor {
             if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault();
         });
         this.palette = new CommandPalette(this.root, t);
+        this.gallery = new TemplateGallery(this.root, t);
         element.appendChild(this.root);
         // every panel can be resized with the mouse (sizes remembered per viewer)
         const half = () => this.root.getBoundingClientRect().width * 0.7;
@@ -1338,6 +1401,7 @@ export class RulezetEditor {
             h('span', { class: 'rze-toolbar-sep' }),
             this.pack.snippets ? btn('plus', 'New rule', () => this.newRule()) : '',
             this.pack.actions ? btn('tools', t('ruleTools'), () => this.openRuleTools(), false, `${t('ruleTools')} (Ctrl+Shift+R)`) : '',
+            this.pack.templates && this.pack.templates.length && !this.options.readOnly ? btn('plus', t('templates'), () => this.openTemplates(), false, t('tplTitle')) : '',
             this.pack.debug ? btn('search', t('try'), () => this.toggleTry(), this._try.open, `${t('tryTitle')} (Ctrl+Shift+Y)`) : '',
             this.pack.format ? btn('format', t('format'), () => this.format(), false, `${t('format')} (Shift+Alt+F)`) : '',
             this.pack.splitRules ? btn('outline', t('outline'), () => this.toggleOutline(), this._outlineOpen, `${t('outline')} (Ctrl+Shift+O)`) : '',
@@ -1346,6 +1410,8 @@ export class RulezetEditor {
             this._testsEnabled() ? btn('play', t('tests'), () => this.toggleTests(), this._test.open, `${t('tests')} (Ctrl+Shift+Enter: ${t('tRun').toLowerCase()})`) : '',
             h('span', { class: 'rze-toolbar-fill' }),
             this.options.tutorial ? btn('help', t('tutorial'), () => this.openTutorial(), false, t('tutorialHint')) : '',
+            h('button', { type: 'button', class: 'rze-btn rze-icon-only', title: t('creditsTitle'), 'aria-label': t('credits'),
+                onclick: () => this.openCredits() }, icon('info')),
             ...(this.options.buttons || []).map(b => h('button', {
                 type: 'button', class: `rze-btn rze-host-btn${b.primary ? ' rze-btn-primary' : ''}`, title: b.title || b.label, 'aria-label': b.label,
                 disabled: this._hostButtonDisabled(b),
@@ -1932,6 +1998,8 @@ export class RulezetEditor {
         const cmds = [
             { id: 'format', label: `${t('format')} document`, key: 'Shift+Alt+F', run: () => this.format(), when: () => !!this.pack.format },
             { id: 'newRule', label: 'Insert a new rule', run: () => this.newRule(), when: () => !!this.pack.snippets },
+            { id: 'credits', label: t('creditsTitle'), run: () => this.openCredits() },
+            { id: 'templates', label: `${t('tplTitle')}…`, run: () => this.openTemplates(), when: () => !!(this.pack.templates && this.pack.templates.length) },
             { id: 'definition', label: 'Go to definition', key: 'F12 / Ctrl+Click', run: () => this.goToDefinition(), when: () => !!this.pack.definition },
             { id: 'rename', label: 'Rename symbol', key: 'F2', run: () => this.startRename(), when: () => !!this.pack.references },
             { id: 'complete', label: 'Trigger suggestions', key: 'Ctrl+Space', run: () => startCompletion(v) },

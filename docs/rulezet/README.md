@@ -15,6 +15,9 @@ its file exists here.
 | Fields panel (title, CVE, tags… in the rule or not) | [fields.md](fields.md) | `editor_core.fields` / `suggest` / `apply_fields`, setting `editor.rule_fields` | — |
 | Tests on samples (Test panel, Create step, Samples tab of the rule page) | [testing.md](testing.md) | `editor_core.tests` (rulezet-tester), `sample_test_core`, `RULE_TESTS_*`, setting `editor.test_on_create` | `serve` + rulezet-tester |
 | Rule tools, new-rule template | [rule-tools.md](rule-tools.md) | `author` = logged-in user; `meta: id` read as `original_uuid` | — |
+| Templates ("New rule from template") | [templates.md](templates.md) | nothing to wire: the YARA pack ships them | same |
+| Try panel (a sample, strings and condition explained) | [try.md](try.md) | nothing to wire: runs in the browser | same |
+| Credits & licences page | [credits.md](credits.md) | `options.credits` = `static/js/editor/editorCredits.js` | the pack's and the editor's sections |
 
 Rulezet side (branch `editor` of rulezet-core):
 

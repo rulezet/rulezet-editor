@@ -3,6 +3,8 @@
  * Pure data and functions: no network, no DOM, no editor engine import.
  */
 import { evaluate, inputBytes } from './debug.js';
+import { TEMPLATES } from './templates.js';
+import { CREDITS } from './credits.js';
 import { parse } from './parser.js';
 import { lint, DEFAULT_LINT_OPTIONS } from './lint.js';
 import { complete, TOP_SNIPPETS } from './completion.js';
@@ -53,6 +55,8 @@ export default {
     snippets: TOP_SNIPPETS,
     tutorial: TUTORIAL,            // "A complete example" chapter of the editor's tutorial
     debug: { evaluate, inputBytes },   // Try panel: one rule on a small sample, in the browser
+    templates: TEMPLATES,              // "New rule from template" gallery (YARA Style Guide structures)
+    credits: CREDITS,                  // Credits & licences page (Markdown)
     actions,
     modules: MODULES,
 
