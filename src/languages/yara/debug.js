@@ -30,7 +30,18 @@ export function inputBytes(value, mode) {
         for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.substr(i * 2, 2), 16);
         return { bytes: out.slice(0, MAX_DATA) };
     }
-    return { bytes: Uint8Array.from(escapedBytes(String(value || ''))).slice(0, MAX_DATA) };
+    return { bytes: Uint8Array.from(escapedBytes(cleanText(value))).slice(0, MAX_DATA) };
+}
+
+/**
+ * A pasted sample often comes with spaces it does not mean (indentation added by a terminal, a
+ * page or a code block, blank lines around it): they are removed at the start and end of every
+ * line, and empty lines at the start and end are dropped. A space that matters is written \x20.
+ */
+export function cleanText(value) {
+    return String(value || '').replace(/\r\n?/g, '\n').split('\n')
+        .map(line => line.replace(/^[ \t]+|[ \t]+$/g, '')).join('\n')
+        .replace(/^\n+|\n+$/g, '');
 }
 
 /** Text with YARA-like escapes -> bytes: \xNN raw, \n \r \t \" \\, everything else UTF-8. */

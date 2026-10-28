@@ -9,6 +9,8 @@ export function h(tag, attrs = {}, ...children) {
         else if (k === 'html') el.innerHTML = val;
         else if (k.startsWith('on') && typeof val === 'function') el.addEventListener(k.slice(2).toLowerCase(), val);
         else if (k === 'style' && typeof val === 'object') Object.assign(el.style, val);
+        // a <textarea> ignores the value attribute: set the property (inputs too, same result)
+        else if (k === 'value' && 'value' in el) el.value = String(val);
         else el.setAttribute(k, val === true ? '' : String(val));
     }
     for (const c of children.flat()) {

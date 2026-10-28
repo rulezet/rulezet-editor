@@ -65,3 +65,10 @@ test('three-valued logic: what a sample cannot decide', () => {
     assert.equal(b.verdict, 'unknown');
     assert.match(str(b, '$b').unsupported, /base64/);
 });
+
+test('text sample: spaces around each line and blank lines around it are dropped', () => {
+    const bytes = (v) => Array.from(inputBytes(v, 'text').bytes);
+    assert.deepEqual(bytes('\n  MZ \n\tab\n\n'), bytes('MZ\nab'));
+    assert.deepEqual(bytes('\\x20MZ'), [0x20, 0x4D, 0x5A]);       // an escaped space stays
+    assert.deepEqual(bytes('a b'), [0x61, 0x20, 0x62]);            // inner spaces stay
+});

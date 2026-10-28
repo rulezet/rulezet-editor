@@ -76,7 +76,7 @@ export class EditorServerHost extends HttpHost {
             method: 'POST',
             headers: this._headers(true),
             body: JSON.stringify({ format: this.format(language), text, sets }),
-        }, { allow: [] });
+        }, { allow: [], timeout: 30000 });     // queues the run: can be slow when the server is busy
     }
 
     async testState(runId) {

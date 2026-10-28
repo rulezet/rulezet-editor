@@ -4,14 +4,19 @@
  * "Insert" puts it at the end of the document (its imports at the top), placeholders ready to fill
  * with Tab. Plain DOM overlay inside the editor; Esc closes it.
  *
- *   new TemplateGallery(root, t).open(templates, (template) => insert(template))
+ *   new TemplateGallery(root, t, viewer).open(templates, (template) => insert(template))
+ *
+ * viewer(parent, text) -> view with destroy(): shows the preview highlighted (the editor gives a
+ * read-only CodeMirror view in the pack's language); without it, a plain <pre>.
  */
 import { h, icon } from './dom.js';
 
 export class TemplateGallery {
-    constructor(root, t) {
+    constructor(root, t, viewer = null) {
         this.root = root;
         this.t = t;
+        this.viewer = viewer;
+        this.previewView = null;
         this.onKey = (e) => {
             if (!this.el) return;
             if (e.key === 'Escape') { e.preventDefault(); this.close(); }
@@ -36,6 +41,7 @@ export class TemplateGallery {
 
     close() {
         if (!this.el) return;
+        this._dropPreview();
         this.el.remove();
         this.el = null;
         document.removeEventListener('keydown', this.onKey, true);
@@ -45,6 +51,18 @@ export class TemplateGallery {
         const tpl = this.selected;
         this.close();
         if (tpl && this.onPick) this.onPick(tpl);
+    }
+
+    _dropPreview() {
+        if (this.previewView) { this.previewView.destroy(); this.previewView = null; }
+    }
+
+    _preview(text) {
+        this._dropPreview();
+        if (!this.viewer) return h('pre', { class: 'rze-gallery-preview rze-mono', text });
+        const box = h('div', { class: 'rze-gallery-preview rze-gallery-code' });
+        this.previewView = this.viewer(box, text);
+        return box;
     }
 
     render() {
@@ -74,7 +92,7 @@ export class TemplateGallery {
         const detail = h('div', { class: 'rze-gallery-detail' },
             tpl ? h('div', { class: 'rze-gallery-detail-head' }, h('strong', { text: tpl.label }), h('span', { class: 'rze-tests-kind', text: tpl.category })) : '',
             tpl ? h('p', { class: 'rze-gallery-desc', text: tpl.description }) : '',
-            tpl ? h('pre', { class: 'rze-gallery-preview rze-mono', text: preview(tpl.snippet) }) : '',
+            tpl ? this._preview(preview(tpl.snippet)) : '',
             h('div', { class: 'rze-gallery-foot' },
                 h('span', { class: 'rze-gallery-hint', text: t('tplHint') }),
                 h('span', { class: 'rze-toolbar-fill' }),
@@ -94,7 +112,18 @@ export class TemplateGallery {
     }
 }
 
+/**
+ * Give every ${placeholder} of a template its own explicit tab stop, in reading order:
+ * ${70} -> ${1:70}. CodeMirror reads a bare number as a tab-stop index with no text, so
+ * `score = ${70}` used to be inserted as `score = ` (same for ${2}, ${5}…); and two fields
+ * with the same text would be edited together. Text with ':' or '}' escaped stays as is.
+ */
+export function numberSnippetFields(snippet) {
+    let n = 0;
+    return snippet.replace(/\$\{((?:\\[{}]|[^{}])*)\}/g, (_, text) => `\${${++n}:${text}}`);
+}
+
 /** The snippet as it will read once inserted: placeholders show their default text. */
-function preview(snippet) {
+export function preview(snippet) {
     return snippet.replace(/\$\{([^}]*)\}/g, '$1').replace(/\{\{uuid\}\}/g, '<uuid>').replace(/\{\{date\}\}/g, '<today>');
 }

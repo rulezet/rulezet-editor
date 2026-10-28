@@ -12,7 +12,7 @@ import { EditorState, Compartment, StateEffect, StateField, EditorSelection } fr
 import {
     EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection,
     dropCursor, rectangularSelection, crosshairCursor, highlightSpecialChars, hoverTooltip, Decoration,
-    ViewPlugin, showPanel, WidgetType,
+    ViewPlugin, showPanel, WidgetType, showTooltip,
 } from '@codemirror/view';
 import {
     StreamLanguage, foldGutter, foldService, indentOnInput, bracketMatching, foldKeymap, indentUnit,
@@ -22,7 +22,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment, un
 import {
     autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap, snippetCompletion, startCompletion,
 } from '@codemirror/autocomplete';
-import { linter, lintGutter, lintKeymap, forceLinting, nextDiagnostic, previousDiagnostic } from '@codemirror/lint';
+import { linter, lintGutter, lintKeymap, forceLinting, nextDiagnostic, previousDiagnostic, forEachDiagnostic } from '@codemirror/lint';
 import { search, searchKeymap, highlightSelectionMatches, openSearchPanel, closeSearchPanel, searchPanelOpen, gotoLine } from '@codemirror/search';
 
 import { registerLanguage, getLanguage, listLanguages, detectLanguage } from './registry.js';
@@ -35,9 +35,9 @@ import plain from '../languages/plain/index.js';
 import { h, icon } from '../ui/dom.js';
 import { renderOutline } from '../ui/outline.js';
 import { renderProblems } from '../ui/problems.js';
-import { renderTests } from '../ui/tests.js';
+import { renderTests, testOutcome } from '../ui/tests.js';
 import { renderTry } from '../ui/try.js';
-import { TemplateGallery } from '../ui/templates.js';
+import { TemplateGallery, numberSnippetFields } from '../ui/templates.js';
 import { markdown } from '../ui/markdown.js';
 import { CORE_CREDITS } from './credits.js';
 import { renderFields } from '../ui/fields.js';
@@ -287,7 +287,7 @@ export class RulezetEditor {
         const sep = doc.length === 0 ? '' : doc.toString().endsWith('\n\n') ? '' : doc.toString().endsWith('\n') ? '\n' : '\n\n';
         this.view.dispatch({ changes: { from: doc.length, insert: sep }, selection: { anchor: doc.length + sep.length } });
         const pos = this.view.state.doc.length;
-        snippetCompletion(expandSnippetVars(body.replace(/\n+$/, '')), { label: tpl.label }).apply(this.view, { label: tpl.label }, pos, pos);
+        snippetCompletion(numberSnippetFields(expandSnippetVars(body.replace(/\n+$/, ''))), { label: tpl.label }).apply(this.view, { label: tpl.label }, pos, pos);
         this.view.dispatch({ scrollIntoView: true });
         this.view.focus();
         this.events.emit('template', tpl.id);
@@ -840,7 +840,7 @@ export class RulezetEditor {
             if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault();
         });
         this.palette = new CommandPalette(this.root, t);
-        this.gallery = new TemplateGallery(this.root, t);
+        this.gallery = new TemplateGallery(this.root, t, (parent, text) => this._codeViewer(parent, text));
         element.appendChild(this.root);
         // every panel can be resized with the mouse (sizes remembered per viewer)
         const half = () => this.root.getBoundingClientRect().width * 0.7;
@@ -881,7 +881,9 @@ export class RulezetEditor {
             highlightSelectionMatches(),
             search({ top: true }),
             EditorState.phrases.of(SEARCH_PHRASES[this.options.locale] || {}),
-            lintGutter(),
+            // the marker's list opens on a click and stays open (pinnedLint below), not on hover
+            lintGutter({ hoverTime: 1e9 }),
+            pinnedLint,
             linter(view => this._lintSource(view), {
                 delay: 300,
                 needsRefresh: u => u.transactions.some(tr => tr.effects.some(e => e.is(refreshLint))),
@@ -927,6 +929,24 @@ export class RulezetEditor {
         ];
         this._extensions = extensions;
         this.view = new EditorView({ state: EditorState.create({ doc, extensions }), parent: this.editorEl });
+    }
+
+    /** Read-only, highlighted view of `text` in `parent` (template preview); returns the EditorView. */
+    _codeViewer(parent, text) {
+        return new EditorView({
+            parent,
+            state: EditorState.create({
+                doc: text,
+                extensions: [
+                    lineNumbers(),
+                    highlightSpecialChars(),
+                    this._languageExtensions(),
+                    themeExtensions,
+                    EditorState.readOnly.of(true),
+                    EditorView.editable.of(false),
+                ],
+            }),
+        });
     }
 
     _languageExtensions() {
@@ -1837,6 +1857,13 @@ export class RulezetEditor {
         this._renderTests();
     }
 
+    /** End of a run: a toast says the result (the Tests panel shows it too, on top). */
+    _testFinished(run) {
+        const o = testOutcome(run, this.t);
+        this._toast(`${o.title} — ${o.text}`, o.tone === 'ok' ? 'success' : o.tone);
+        this.events.emit('testFinished', run);
+    }
+
     _pollTest(runId) {
         clearTimeout(this._timers.test);
         this._timers.test = setTimeout(async () => {
@@ -1847,9 +1874,24 @@ export class RulezetEditor {
                 this._test.run = run;
                 this.events.emit('test', run);
                 if (run.status === 'queued' || run.status === 'running') this._pollTest(runId);
+                else this._testFinished(run);
+                this._test.waiting = 0;
+                this._test.error = null;
             } catch (e) {
+                // the run goes on on the server: a busy or restarting server only delays the
+                // answer, so keep asking (spaced out) before giving up
+                const waiting = (this._test.waiting || 0) + 1;
+                this._test.waiting = waiting;
+                if (waiting <= 10) {
+                    this._test.error = this.t('tWaitingServer', { n: waiting });
+                    this._renderTests();
+                    clearTimeout(this._timers.test);
+                    this._timers.test = setTimeout(() => this._pollTest(runId), Math.min(2000 * waiting, 10000));
+                    return;
+                }
                 this._test.error = e.message || String(e);
-                this._test.run = { ...this._test.run, status: 'failed' };
+                this._test.run = { ...this._test.run, status: 'failed', error: this._test.error };
+                this._testFinished(this._test.run);
             }
             this._renderTests();
         }, this.options.testPollMs);
@@ -2205,6 +2247,74 @@ function referenceHighlighter(editor) {
 }
 
 /** Strings of the rule that matched the test sample the user opened (Test panel). */
+/**
+ * The problems of a line, opened by a click on its marker in the gutter, and kept open: moving the
+ * mouse away does not close it. It closes on a click anywhere else, Escape, an edit of that line,
+ * or once one of its actions (quick fixes) has run.
+ */
+const setPinnedLint = StateEffect.define();
+
+const pinnedLint = [
+    StateField.define({
+        create: () => null,
+        update(value, tr) {
+            for (const e of tr.effects) if (e.is(setPinnedLint)) value = e.value;
+            if (value && tr.docChanged) {
+                const line = tr.startState.doc.lineAt(value.pos);
+                value = tr.changes.touchesRange(line.from, line.to) ? null : { ...value, pos: tr.changes.mapPos(value.pos) };
+            }
+            return value;
+        },
+        provide: f => showTooltip.compute([f], state => {
+            const v = state.field(f);
+            return v ? { pos: v.pos, above: false, create: view => ({ dom: pinnedLintDom(view, v.pos) }) } : null;
+        }),
+    }),
+    EditorView.domEventHandlers({
+        keydown(e, view) {
+            if (e.key !== 'Escape' || !view.state.field(pinnedLint[0])) return false;
+            view.dispatch({ effects: setPinnedLint.of(null) });
+            return true;
+        },
+    }),
+    ViewPlugin.fromClass(class {
+        constructor(view) {
+            this.onDown = (e) => {
+                const el = e.target instanceof Element ? e.target : null;
+                const marker = el && view.dom.contains(el) && el.closest('.cm-lint-marker');
+                const open = view.state.field(pinnedLint[0]);
+                if (marker) {                       // a marker: open its line's problems, or close them
+                    const block = view.lineBlockAtHeight(marker.getBoundingClientRect().top + 5 - view.documentTop);
+                    view.dispatch({ effects: setPinnedLint.of(open && open.pos === block.from ? null : { pos: block.from }) });
+                    e.preventDefault();
+                    return;
+                }
+                if (!open || (el && el.closest('.rze-pinned-lint'))) return;
+                view.dispatch({ effects: setPinnedLint.of(null) });   // a click anywhere else
+            };
+            document.addEventListener('mousedown', this.onDown, true);
+        }
+        destroy() { document.removeEventListener('mousedown', this.onDown, true); }
+    }),
+];
+
+function pinnedLintDom(view, pos) {
+    const line = view.state.doc.lineAt(pos);
+    const items = [];
+    forEachDiagnostic(view.state, (d, from, to) => {
+        if (from <= line.to && to >= line.from) items.push({ d, from, to });
+    });
+    const close = () => view.dispatch({ effects: setPinnedLint.of(null) });
+    return h('div', { class: 'cm-tooltip-lint rze-pinned-lint' },
+        ...items.map(({ d, from, to }) => h('div', { class: `cm-diagnostic cm-diagnostic-${d.severity}` },
+            h('span', { class: 'cm-diagnosticText', text: d.message }),
+            ...(d.actions || []).map(a => h('button', {
+                type: 'button', class: 'cm-diagnosticAction',
+                onmousedown: (e) => { e.preventDefault(); },
+                onclick: (e) => { e.preventDefault(); close(); a.apply(view, from, to); view.focus(); },
+            }, a.name)))));
+}
+
 const testHitMarks = StateField.define({
     create: () => Decoration.none,
     update(value, tr) {

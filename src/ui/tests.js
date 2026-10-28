@@ -65,6 +65,7 @@ export function renderTests(el, state, cb) {
 
     if (state.error && state.sets && state.sets.length) body.appendChild(note('error', state.error));
     if (run && run.error) body.appendChild(note('error', run.error));
+    if (run && (run.status === 'done' || run.status === 'failed') && !state.stale) body.appendChild(finishedCard(run, t));
     if (run && state.stale) body.appendChild(note('muted', t('tStale')));
 
     // ── search + filters ──
@@ -129,6 +130,36 @@ export function renderTests(el, state, cb) {
         setsSearch.focus();
         setsSearch.setSelectionRange(setsCaret[0], setsCaret[1]);
     }
+}
+
+/**
+ * The result of a finished run, in one sentence: what the rule detected, what it missed, what it
+ * wrongly matched — so the end of a run is never silent. testOutcome() gives the words.
+ */
+export function testOutcome(run, t) {
+    const s = run.summary || {};
+    if (run.status === 'failed') return { tone: 'error', mark: '✗', title: t('tEndFailed'), text: run.error || '' };
+    const parts = [];
+    if (s.detected) parts.push(t('tEndDetected', { n: s.detected }));
+    if (s.missed) parts.push(t('tEndMissed', { n: s.missed }));
+    if (s.false_positives) parts.push(t('tEndFp', { n: s.false_positives }));
+    if (s.timeouts || s.errors) parts.push(t('tEndProblems', { n: (s.timeouts || 0) + (s.errors || 0) }));
+    const bad = s.missed || s.false_positives;
+    return {
+        tone: bad ? 'error' : (s.timeouts || s.errors) ? 'warning' : 'ok',
+        mark: bad ? '✗' : '✓',
+        title: bad ? t('tEndBad') : t('tEndGood'),
+        text: `${t('tEndOn', { n: s.total || 0 })}: ${parts.join(' · ') || t('tEndNothing')}`,
+    };
+}
+
+function finishedCard(run, t) {
+    const o = testOutcome(run, t);
+    return h('div', { class: `rze-try-verdict rze-tests-end rze-tone-${o.tone}` },
+        h('div', { class: 'rze-try-verdict-head' },
+            h('span', { class: 'rze-try-mark', text: o.mark }),
+            h('strong', { class: 'rze-try-answer', text: o.title })),
+        o.text ? h('div', { class: 'rze-try-why', text: o.text }) : '');
 }
 
 function summary(run, t) {

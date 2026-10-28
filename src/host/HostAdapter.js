@@ -65,7 +65,7 @@ export class HttpHost extends LocalDraftHost {
         this.apiKey = options.apiKey || null;
         this.csrfToken = options.csrfToken || null;
         this.fetch = options.fetch || ((...args) => window.fetch(...args));
-        this.timeout = options.timeout ?? 8000;
+        this.timeout = options.timeout ?? 15000;
         this.formatMap = options.formatMap || {};      // editor language id -> backend format name
     }
 
@@ -81,22 +81,44 @@ export class HttpHost extends LocalDraftHost {
         return h;
     }
 
-    async _request(path, init = {}, { allow = [400] } = {}) {
+    /**
+     * One JSON call. A busy server (restarting, running jobs) must not fail the editor: a GET
+     * (nothing changes on the server) is tried again when it times out, cannot be reached or
+     * answers 502 / 503 / 504 — after 1 s, 2 s, then 4 s. A POST is sent once.
+     * Options: allow (statuses whose body is still read), timeout (ms), retries (GET only).
+     */
+    async _request(path, init = {}, { allow = [400], timeout = this.timeout, retries = null } = {}) {
+        const method = String(init.method || 'GET').toUpperCase();
+        const tries = 1 + (retries ?? (method === 'GET' ? 3 : 0));
+        let lastError;
+        for (let attempt = 0; attempt < tries; attempt++) {
+            if (attempt) await new Promise(r => setTimeout(r, 1000 * 2 ** (attempt - 1)));
+            try {
+                return await this._requestOnce(path, init, allow, timeout);
+            } catch (e) {
+                lastError = e;
+                if (!e.transient) throw e;
+            }
+        }
+        throw lastError;
+    }
+
+    async _requestOnce(path, init, allow, timeout) {
         const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        const timer = ctrl ? setTimeout(() => ctrl.abort(), this.timeout) : null;
+        const timer = ctrl ? setTimeout(() => ctrl.abort(), timeout) : null;
+        const fail = (message, extra = {}) => Object.assign(new Error(message), extra);
         try {
             let res;
             try {
                 res = await this.fetch(this.baseUrl + path, { ...init, signal: ctrl ? ctrl.signal : undefined });
             } catch (e) {
-                if (e && e.name === 'AbortError') throw new Error(`${this.name} did not answer within ${Math.round(this.timeout / 1000)} s`);
-                throw new Error(`${this.name} not reachable: ${e.message || e}`);
+                if (e && e.name === 'AbortError') throw fail(`${this.name} did not answer within ${Math.round(timeout / 1000)} s (busy?)`, { transient: true });
+                throw fail(`${this.name} not reachable: ${e.message || e}`, { transient: true });
             }
             const data = await res.json().catch(() => ({}));
             if (!res.ok && !allow.includes(res.status)) {
-                const err = new Error(data.error || data.message || `HTTP ${res.status}`);
-                err.status = res.status;
-                throw err;
+                throw fail(data.error || data.message || `HTTP ${res.status}`,
+                    { status: res.status, transient: [502, 503, 504].includes(res.status) });
             }
             return data;
         } finally {
