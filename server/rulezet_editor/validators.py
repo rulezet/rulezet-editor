@@ -28,7 +28,7 @@ class YaraValidator(Validator):
     def validate(self, content):
         import yara
         try:
-            rules = yara.compile(source=content)
+            rules = yara.compile(source=content, includes=False)   # never read a file of this machine
         except yara.SyntaxError as e:
             return {'errors': [str(e)], 'warnings': []}
         except yara.Error as e:

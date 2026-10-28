@@ -74,8 +74,8 @@ def create_blueprint(backend, name='rulezet_editor', max_content=MAX_CONTENT, as
 
     @bp.get('/rules')
     def search_rules():
-        fmt = request.args.get('format', '').strip()
-        query = request.args.get('q', '').strip()
+        fmt = request.args.get('format', '').strip()[:32]
+        query = request.args.get('q', '').strip()[:200]
         limit = max(1, min(request.args.get('limit', 10, type=int) or 10, 50))
         try:
             results = backend.search_rules(fmt, query, limit)
@@ -97,7 +97,7 @@ def create_blueprint(backend, name='rulezet_editor', max_content=MAX_CONTENT, as
         query = request.args.get('q', '').strip()[:200]
         limit = max(1, min(request.args.get('limit', 10, type=int) or 10, 50))
         try:
-            results = backend.suggest(request.args.get('format', '').strip(), field, query, limit)
+            results = backend.suggest(request.args.get('format', '').strip()[:32], field, query, limit)
         except BackendError as e:
             return error(str(e), 502)
         return jsonify({'results': results or []})
@@ -110,7 +110,7 @@ def create_blueprint(backend, name='rulezet_editor', max_content=MAX_CONTENT, as
         path = [unquote(p)[:200] for p in raw.split('/') if p][:5]
         page = max(1, min(request.args.get('page', 1, type=int) or 1, 1000))
         try:
-            data = backend.browse(request.args.get('format', '').strip(), field, path, page)
+            data = backend.browse(request.args.get('format', '').strip()[:32], field, path, page)
         except BackendError as e:
             return error(str(e), 502)
         data = data or {}
@@ -119,8 +119,10 @@ def create_blueprint(backend, name='rulezet_editor', max_content=MAX_CONTENT, as
 
     @bp.get('/rules/<path:rule_name>')
     def get_rule(rule_name):
+        if len(rule_name) > 200:
+            return error('Rule name too long', 400)
         try:
-            rule = backend.get_rule(request.args.get('format', '').strip(), rule_name)
+            rule = backend.get_rule(request.args.get('format', '').strip()[:32], rule_name)
         except BackendError as e:
             return error(str(e), 502)
         return jsonify(rule) if rule else error('Rule not found.', 404)
