@@ -349,7 +349,11 @@ textarea.rze-field-input { resize: vertical; font-family: inherit; }
 .rze-field-format-btn { border: 0; background: var(--rze-panel-bg); color: var(--rze-fg); font: inherit; font-size: 11.5px; padding: 0 8px; cursor: pointer; border-radius: 6px 0 0 6px; }
 .rze-field-format-menu { min-width: 180px; right: auto; }
 .rze-field-format-menu li { flex-direction: row; justify-content: space-between; gap: 10px; }
-.rze-field-add, .rze-field-insert { margin-top: 6px; }
+.rze-field-insert { margin-top: 6px; }
+/* "+" of a list field (ATT&CK, vulnerabilities…): a button of the box, like ☰ next to it */
+.rze-field-add { width: 30px; flex: none; border: 0; border-left: 1px solid var(--rze-border); background: var(--rze-panel-bg);
+    color: var(--rze-muted); font: inherit; font-size: 16px; font-weight: 700; line-height: 1; cursor: pointer; padding: 0; }
+.rze-field-add:not(:disabled):hover { color: var(--rze-accent); background: var(--rze-active-line); }
 .rze-field-insert-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
 .rze-field-insert-btn .rze-icon svg { width: 12px; height: 12px; }
 .rze-field-pick-btn { display: inline-flex; align-items: center; gap: 5px; align-self: stretch; padding: 0 10px; border: 1px solid var(--rze-border); border-radius: 6px;
@@ -359,7 +363,7 @@ textarea.rze-field-input { resize: vertical; font-family: inherit; }
 .rze-field-pick-btn .rze-icon svg { width: 12px; height: 12px; }
 .rze-field-browse-btn { width: 28px; border: 0; border-left: 1px solid var(--rze-border); background: var(--rze-panel-bg); color: var(--rze-muted); cursor: pointer; font-size: 14px; }
 .rze-field-add.rze-on { background: var(--rze-ok); color: #fff; }
-.rze-field-add:disabled { cursor: default; }
+.rze-field-add:disabled { cursor: default; opacity: .55; }
 .rze-field-browse-btn:hover, .rze-field-browse-btn.rze-on { color: var(--rze-accent); background: var(--rze-active-line); }
 .rze-field-list-box > :last-child { border-radius: 0 6px 6px 0; }
 .rze-field-chip.rze-colored { border: 1px solid; }
@@ -844,3 +848,58 @@ body.rze-resizing-y, body.rze-resizing-y * { cursor: row-resize !important; }
 .rze-try-string-head { display: flex; align-items: center; gap: 8px; }
 .rze-try-string-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 3px 0 2px 20px; }
 .rze-try-hit > .rze-try-line .rze-try-text, .rze-try-hit .rze-tests-chip { outline: 2px solid color-mix(in srgb, var(--rze-info) 55%, transparent); border-radius: 4px; }
+
+/* ── Checks panel (ui/checks.js): the host's own check, then each external tool ── */
+.rze-checks-hint { font-size: 11.5px; color: var(--rze-muted); margin-right: auto; }
+.rze-checks-body { padding: 8px 10px; overflow: auto; display: grid; gap: 8px; grid-template-columns: 1fr; align-content: start; }   /* one check per row, full width */
+.rze-checks-section { padding: 8px 10px; border: 1px solid var(--rze-border); border-left: 4px solid var(--rze-muted); border-radius: 7px; background: var(--rze-bg); }
+.rze-checks-section.rze-tone-ok { border-left-color: var(--rze-ok); }
+.rze-checks-section.rze-tone-warning { border-left-color: var(--rze-warning); }
+.rze-checks-section.rze-tone-error { border-left-color: var(--rze-error); }
+.rze-checks-section:first-of-type { grid-column: 1 / -1; }
+.rze-checks-section-head { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.rze-checks-link { color: var(--rze-muted); text-decoration: none; font-size: 11px; }
+.rze-checks-badge { margin-left: auto; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--rze-active-line); color: var(--rze-muted); }
+.rze-checks-badge.rze-tone-ok { color: var(--rze-ok); }
+.rze-checks-badge.rze-tone-warning { color: var(--rze-warning); }
+.rze-checks-badge.rze-tone-error { color: var(--rze-error); }
+.rze-checks-sub { font-size: 11.5px; color: var(--rze-muted); margin: 2px 0 6px; }
+.rze-checks-list { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow: auto; }
+.rze-checks-item { padding: 4px 6px; margin-bottom: 3px; border-radius: 5px; font-size: 12px; border-left: 3px solid var(--rze-warning); background: var(--rze-active-line); }
+.rze-checks-item.rze-sev-error { border-left-color: var(--rze-error); }
+.rze-checks-item.rze-sev-info { border-left-color: var(--rze-muted); }
+.rze-checks-item.rze-clickable { cursor: pointer; }
+.rze-checks-item.rze-clickable:hover { filter: brightness(.96); }
+.rze-checks-pos, .rze-checks-code { display: inline-block; margin-right: 5px; padding: 0 5px; border-radius: 4px; font-size: 10.5px;
+    font-family: var(--rze-mono, monospace); background: var(--rze-bg); color: var(--rze-muted); }
+.rze-checks-code { margin: 0 0 0 5px; }
+.rze-checks-detail { margin-top: 2px; font-size: 11px; color: var(--rze-muted); font-family: var(--rze-mono, monospace); word-break: break-all; }
+.rze-checks-actions { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+.rze-checks-error, .rze-checks-stale { grid-column: 1 / -1; font-size: 12px; padding: 6px 8px; border-radius: 6px; background: var(--rze-active-line); }
+.rze-checks-error { color: var(--rze-error); }
+.rze-checks-stale { color: var(--rze-warning); }
+.rze-checks-empty { grid-column: 1 / -1; font-size: 12px; color: var(--rze-muted); padding: 10px 0; }
+/* spinner (Checks panel while it runs) */
+.rze-spinner { display: inline-block; width: 13px; height: 13px; border-radius: 50%; flex: none; vertical-align: -2px;
+    border: 2px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; animation: rze-spin .7s linear infinite; }
+.rze-btn .rze-spinner { margin-right: 6px; }
+@keyframes rze-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rze-spinner { animation-duration: 2s; } }
+.rze-checks-running { grid-column: 1 / -1; display: grid; gap: 6px; padding: 6px 2px; }
+.rze-checks-running-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--rze-muted); }
+.rze-checks-running-row .rze-spinner { color: var(--rze-accent); }
+.rze-checks-explain { margin-top: 3px; font-size: 11.5px; line-height: 1.45; color: var(--rze-fg); opacity: .85; white-space: pre-wrap; }
+.rze-checks-detail code { padding: 1px 5px; border-radius: 4px; background: var(--rze-bg); color: var(--rze-accent); }
+
+/* Rules panel: titles-only view, per-rule collapse, long lists cut (outline.js) */
+.rze-outline-compact { font-size: 11.5px; padding: 1px 8px; gap: 4px; }
+.rze-outline-chevron { flex: none; width: 20px; height: 20px; padding: 0; opacity: .7; }
+.rze-outline-chevron .rze-icon svg { width: 11px; height: 11px; }
+.rze-outline-item.rze-outline-closed { padding-top: 2px; padding-bottom: 2px; }
+.rze-outline-more { display: inline-block; margin: 2px 0 0; padding: 0; border: 0; background: none; font: inherit; font-size: 11.5px;
+    color: var(--rze-accent); cursor: pointer; }
+.rze-outline-more:hover { text-decoration: underline; }
+/* a very long note line or rule detail never stretches the panel */
+.rze-outline-note-line { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-word; }
+.rze-outline-meta { max-height: 9em; overflow: hidden; }
+.rze-outline-item .rze-outline-children { max-height: 60vh; overflow: auto; }

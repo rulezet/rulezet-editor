@@ -19,6 +19,9 @@
  *   ruleFields(language)            -> [{ id, label, type, help?, options?, suggest?, report?, meta? }]
  *   suggest(language, field, query) -> [{ value, label, detail?, color? }]
  *   browse(language, field, path, page) -> { folders: [{ id, label, count? }], items, has_more }
+ *
+ *   External checks (the host's extra tools, advice only — Checks panel; docs/rulezet/external-checks.md):
+ *   externalChecks(language, text)  -> { tool: { available, ok, reason?, errors[], warnings[], fixed_text? } }
  */
 export class HostAdapter {
     constructor() {

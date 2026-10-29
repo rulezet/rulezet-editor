@@ -18,6 +18,7 @@ its file exists here.
 | Templates ("New rule from template") | [templates.md](templates.md) | nothing to wire: the YARA pack ships them | same |
 | Try panel (a sample, strings and condition explained) | [try.md](try.md) | nothing to wire: runs in the browser | same |
 | Credits & licences page | [credits.md](credits.md) | `options.credits` = `static/js/editor/editorCredits.js` | the pack's and the editor's sections |
+| Checks panel: the host's check + external checks (YARA-X, CCCS standard, yaraQA) | [external-checks.md](external-checks.md) | `external_checks.py`, `POST /editor-api/external-checks`, Create step `external`, setting `editor.external_checks` | the server's own check only |
 
 Rulezet side (branch `editor` of rulezet-core):
 

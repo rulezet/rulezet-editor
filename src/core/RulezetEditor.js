@@ -37,6 +37,7 @@ import { renderOutline } from '../ui/outline.js';
 import { renderProblems } from '../ui/problems.js';
 import { renderTests, testOutcome } from '../ui/tests.js';
 import { renderTry } from '../ui/try.js';
+import { renderChecks } from '../ui/checks.js';
 import { TemplateGallery, numberSnippetFields } from '../ui/templates.js';
 import { markdown } from '../ui/markdown.js';
 import { CORE_CREDITS } from './credits.js';
@@ -73,6 +74,7 @@ const DEFAULTS = {
     fieldsReport: true,          // fields written into a rule built from the panel (empty document); a rule already
                                  // in the text never gets fields written into it unless the user ticks them
     tutorial: true,              // a Tutorial button: a guided tour of every feature, with examples
+    tutorialSteps: null,         // (editor) => [steps]: the host's own steps (its panels around the editor), shown before the last one
     toast: null,                 // (message, tone) => void: show the editor's messages with the host's own notifications
     lockPasted: false,           // a pasted rule is locked (unlockable): fields can be filled, its text is kept as is
     fieldsOpen: true,            // the Fields panel is open when the editor starts (when it is available)
@@ -117,6 +119,7 @@ export class RulezetEditor {
         this._externals = new Map();
         this._test = { open: false, sets: null, chosen: new Set(), expanded: new Set(), focus: null, query: '', filter: 'all', limits: {}, run: null, error: null, loading: false, starting: false, text: null, stale: false };
         this._try = { open: false, mode: 'text', input: '', rule: null, result: null, error: null };
+        this._checks = { open: false, running: false, error: null, host: null, tools: null, text: null, stale: false };
         this._fields = { open: false, defs: null, loading: false, error: null, byRule: new Map(), picked: null, suggest: null, ui: {} };
         this._timers = {};
         this._destroyed = false;
@@ -489,6 +492,62 @@ export class RulezetEditor {
         });
     }
 
+    // ── Checks: the host's own check + its external tools (YARA-X, CCCS, yaraQA in Rulezet) ──
+
+    /** The Checks panel is offered when the host checks documents (validate) or has external tools. */
+    _checksEnabled() {
+        return !!(this.host && this.host.has && (this.host.has('externalChecks') || this.host.has('validate')));
+    }
+
+    /** Open / close the Checks panel; opening it runs every check on the current document. */
+    toggleChecks(force) {
+        const open = !!(force ?? !this._checks.open) && this._checksEnabled();
+        this._checks.open = open;
+        this.checksEl.hidden = !open;
+        if (open) this.runChecks(); else this._renderToolbar();
+    }
+
+    /** One section per opinion: the host's own check (it decides saving), then each external tool. */
+    async runChecks() {
+        const C = this._checks;
+        const text = this.getValue();
+        Object.assign(C, { running: true, error: null, stale: false });
+        this._renderChecks();
+        const language = this.pack.id;
+        const [own, tools] = await Promise.all([
+            this.host.has('validate') ? this.host.validate(language, text).then(items => ({ ok: true, items }), e => ({ ok: false, error: e })) : null,
+            this.host.has('externalChecks') ? this.host.externalChecks(language, text).then(r => ({ ok: true, r }), e => ({ ok: false, error: e })) : null,
+        ]);
+        C.running = false;
+        C.text = text;
+        C.host = own && own.ok ? { name: this.host.name, items: own.items || [] } : null;
+        C.tools = tools && tools.ok ? tools.r : null;
+        const failed = [own, tools].find(x => x && !x.ok);
+        C.error = failed ? (failed.error && failed.error.message) || String(failed.error) : null;
+        this._renderChecks();
+    }
+
+    _renderChecks() {
+        const C = this._checks;
+        if (!C.open) return;
+        C.stale = C.text !== null && C.text !== this.getValue();
+        renderChecks(this.checksEl, C, {
+            t: this.t,
+            hostName: this.host.has('validate') ? this.host.name : null,
+            toolNames: this.host.has('externalChecks') ? ['YARA-X', 'CCCS YARA standard', 'yaraQA'].filter((_, i) => !C.tools || Object.keys(C.tools).includes(['yarax', 'cccs', 'yaraqa'][i])) : [],
+            onRun: () => this.runChecks(),
+            onClose: () => this.toggleChecks(false),
+            onGoto: (line) => this.goTo(line),
+            onApply: (tool) => {
+                const fixed = C.tools && C.tools[tool] && C.tools[tool].fixed_text;
+                if (!fixed || this.getValue() !== C.text) return;
+                this.setValue(fixed);
+                this.runChecks();
+            },
+        });
+        this._renderToolbar();
+    }
+
     _ruleNameAtCursor() {
         const pos = this.view.state.selection.main.head;
         const r = (this.getModel().rules || []).find(x => pos >= x.from && pos <= x.to);
@@ -565,10 +624,29 @@ export class RulezetEditor {
         const t = this.t;
         const pack = this.pack;
         const example = pack.sample || 'rule Example\n{\n    strings:\n        $a = "evil"\n    condition:\n        $a\n}';
+        // the demo every "Try it" works on: the pack's worked example in its final form (or its sample)
+        const tut0 = pack.tutorial && pack.tutorial.stages && pack.tutorial.stages.length ? pack.tutorial : null;
+        const demoText = tut0 ? tut0.stages[tut0.stages.length - 1].text : example;
+        const demoName = tut0 ? tut0.rule : null;
+        const loadDemo = () => {
+            if (demoName) { if (!this.getValue().includes(`rule ${demoName}`)) this._showTutorialStage(demoName, demoText); }
+            else if (!this.getValue().trim()) this.setValue(example);
+        };
+        // put the cursor on the last occurrence of `needle` in the demo rule, then run `then`
+        const atDemo = (needle, then) => () => {
+            loadDemo();
+            const text = this.getValue();
+            const pos = text.lastIndexOf(needle);
+            if (pos < 0) return;
+            this.goTo(pos + 1);
+            this.view.focus();
+            if (then) then(pos + 1);
+        };
         const steps = [
             { title: 'Welcome to the rule editor',
               body: `An editor made for detection rules (${pack.name}): it checks your rules as you type, completes what you write, explains every keyword, and can test the rules on samples.\n\nThis tour shows each feature with an example. Use the arrows (← →) or the buttons; Esc closes it. Open it again any time with the Tutorial button.`,
-              try: { label: 'Load an example rule', run: () => { if (!this.getValue().trim()) this.setValue(example); else this.insertText('\n' + example + '\n', { at: this.view.state.doc.length }); } } },
+              example: demoText,
+              try: { label: demoName ? 'Load the example rule' : 'Load an example rule', run: () => { if (demoName) loadDemo(); else if (!this.getValue().trim()) this.setValue(example); else this.insertText('\n' + example + '\n', { at: this.view.state.doc.length }); } } },
             { title: 'Write a rule', target: q('.cm-content'),
               body: 'Type freely: keywords, strings, modules and rule names are coloured. Suggestions appear as you type; Ctrl+Space shows them at any time. Typing `rule` then Tab inserts a full template; `pe.` lists everything the pe module offers (it also adds `import "pe"` for you).',
               example: 'rule Suspicious_Downloader\n{\n    strings:\n        $url = "http://" ascii wide\n        $api = "URLDownloadToFileA"\n    condition:\n        all of them\n}',
@@ -576,9 +654,13 @@ export class RulezetEditor {
               try: pack.snippets ? { label: 'Insert a new rule', run: () => this.newRule() } : null },
             { title: 'Errors while you type', target: q('.rze-status-counts'),
               body: 'Mistakes are underlined at once (an undefined `$string`, a missing import, a wrong modifier, a string that is never used…). Hover the underline to read why; many come with a quick fix (lightbulb). The counters here open the Problems panel, every problem of the document grouped by rule.',
-              example: 'condition:\n    $missing      // ← "undefined string $missing"',
+              example: 'rule Tutorial_Mistakes\n{\n    strings:\n        $unused = "never used"     // ← warning: unused string\n    condition:\n        $missing                   // ← error: undefined string $missing\n}',
               keys: [['F8 / Shift+F8', 'next / previous problem'], ['Ctrl+Shift+M', 'Problems panel']],
-              try: { label: 'Open the Problems panel', run: () => this.toggleProblems(true) } },
+              try: { label: 'Add a rule with mistakes, then open Problems', run: () => {
+                  if (!this.getValue().includes('rule Tutorial_Mistakes'))
+                      this.insertText('\nrule Tutorial_Mistakes\n{\n    strings:\n        $unused = "never used"\n    condition:\n        $missing\n}\n', { at: this.view.state.doc.length });
+                  setTimeout(() => this.toggleProblems(true), 400);
+              } } },
             ...(pack.templates && pack.templates.length ? [{ title: 'Start from a template', target: btn(t('templates')),
               body: `${pack.templates.length} complete starting points, by threat and file type: Windows malware (PE, DLL, .NET, packed, shellcode), Linux / macOS / Android, documents (Office macros, PDF, RTF, LNK), scripts and webshells, ransomware, C2 configuration, hack tools, exploits of a CVE, hunting rules… Each one follows the YARA Style Guide: $x strings are enough alone, $s strings count together, $a check the file type, $fp exclude false positives; cheap checks first in the condition.\n\nPick one, Insert, then Tab from one placeholder to the next.`,
               try: { label: 'Open the templates', run: () => this.openTemplates() } }] : []),
@@ -589,7 +671,14 @@ export class RulezetEditor {
               try: { label: 'Open the Try panel', run: () => this.toggleTry(true) } }] : []),
             { title: 'Understand and navigate', target: q('.cm-content'),
               body: 'Hover anything to get help: a keyword, a module function and its arguments, a `$string` (its bytes in hex), another rule. F12 or Ctrl+Click jumps to where a string or a rule is defined — even to a rule stored on the host. F2 renames a `$string` or a rule everywhere at once.',
-              keys: [['F12 / Ctrl+Click', 'go to definition'], ['F2', 'rename everywhere'], ['Ctrl+/', 'comment / uncomment']] },
+              example: demoName ? 'condition:\n    … and ($url or $hex_url)\n          ↑ F12 here → jumps to   $url = /https?:\\/\\/…/' : null,
+              keys: [['F12 / Ctrl+Click', 'go to definition'], ['F2', 'rename everywhere'], ['Ctrl+/', 'comment / uncomment']],
+              try: demoName ? { label: 'Jump from $url to its definition', run: atDemo('$url or', pos => this.goToDefinition(pos)) } : null },
+            ...(demoName ? [{ title: 'Rename everywhere', target: q('.cm-content'),
+              body: 'F2 on a `$string` or a rule name renames it in the whole document at once — its definition and every use in conditions, here and in the other rules.',
+              example: '$ua  →  $user_agent      (definition and the condition updated together)',
+              keys: [['F2', 'rename']],
+              try: { label: 'Rename $ua', run: atDemo('$ua)', pos => this.startRename(pos)) } }] : []),
         ];
         // the pack's worked example: a good rule built step by step, shown in the document
         const tut = pack.tutorial;
@@ -600,20 +689,28 @@ export class RulezetEditor {
             }
         }
         if (pack.actions) steps.push({ title: 'Rule tools', target: btn(t('ruleTools')),
-            body: 'Common edits on the rule under the cursor, in one click: set the author, add today\'s date, an id, a tag, a string, a file-type check (PE, ELF…), and more.',
+            body: 'Common edits on the rule under the cursor, in one click: set the author, add today\'s date or update `modified`, an id, a tag, a string, a file-type check (PE, ELF…), a file size limit, make it private, and more.',
+            example: 'meta:\n    id = "3f1c…"           ← "Add an id"\n    date = "2026-10-29"    ← "Add today\'s date"\ncondition:\n    uint16(0) == 0x5A4D and …   ← "PE file check"',
             keys: [['Ctrl+Shift+R', 'rule tools']],
-            try: { label: 'Open the rule tools', run: () => this.openRuleTools() } });
+            try: { label: 'Open the rule tools on the example', run: atDemo('meta:', () => this.openRuleTools()) } });
         if (pack.format) steps.push({ title: 'Format', target: btn(t('format')),
             body: 'One clean layout for every rule: indentation, aligned `=` in strings, comments kept. Rules that still have errors are left untouched.',
+            example: 'rule Messy { strings: $a="x" $bb = "yy" condition: $a and $bb }\n        ↓ Format\nrule Messy\n{\n    strings:\n        $a  = "x"\n        $bb = "yy"\n    condition:\n        $a and $bb\n}',
             keys: [['Shift+Alt+F', 'format the document']],
-            try: { label: 'Format the document', run: () => this.format() } });
+            try: { label: 'Add a messy rule and format', run: () => {
+                if (!this.getValue().includes('rule Tutorial_Messy'))
+                    this.insertText('\nrule Tutorial_Messy { strings: $a="tutorial_aaa" $bb = "tutorial_bbbb" condition: $a and $bb }\n', { at: this.view.state.doc.length });
+                setTimeout(() => this.format(), 150);
+            } } });
         if (pack.splitRules) steps.push({ title: 'Several rules: the Rules panel', target: btn(t('outline')),
             body: 'A document can hold many rules. The Rules panel lists them with their status (errors, warnings), their strings and condition; click one to jump to it, filter by name or tag, copy a single rule.\n\nThe lock icon freezes a rule: its text can no longer change until you unlock it.',
+            example: 'MAL_Win_Downloader_Example   ✓   5 strings · import pe\nTutorial_Mistakes            ✗ 1 error\nTutorial_Messy               ✓',
             keys: [['Ctrl+Shift+O', 'Rules panel and its filter']],
-            try: { label: 'Open the Rules panel', run: () => this.toggleOutline(true) } });
+            try: { label: 'Open the Rules panel', run: () => { loadDemo(); this.toggleOutline(true); } } });
         steps.push({ title: 'Locked rules', target: q('.rze-lockbar') ,
             body: 'Some rules are locked, with a bar above them: a rule you pasted (its text is kept as pasted), a rule inserted from the host, the rules another rule depends on, or a rule you locked yourself. Typing inside is refused. "Unlock to edit" frees it when you are allowed to (your own rules, or as an admin).',
-            example: '🔒 Pasted rule: locked — fill its fields on the right, its text stays as pasted   [Unlock to edit]' });
+            example: '🔒 Pasted rule: locked — fill its fields on the right, its text stays as pasted   [Unlock to edit]',
+            try: demoName ? { label: 'Lock the example rule', run: () => { loadDemo(); this.lockRule(demoName, { label: 'Locked by the tutorial' }); } } : null });
         if (this._fieldsEnabled()) {
             steps.push({ title: 'Fields of the rule', target: btn(t('fields')),
                 body: 'The rule\'s metadata on the host: title, description, author, license, version, vulnerabilities, ATT&CK techniques, tags, linked rules. Each field can be written into the rule (a `meta:` key) — tick "Write into the rule" — or kept outside it, so the rule text stays untouched.\n\nValues the rule already holds fill the fields; when they differ you choose: use the rule\'s value, write yours, or keep both different on purpose.',
@@ -625,20 +722,36 @@ export class RulezetEditor {
         }
         if (this._testsEnabled()) steps.push({ title: 'Test on samples', target: btn(t('tests')),
             body: 'Run the document on sample sets in a sandbox and watch every sample turn into a verdict: detected, missed, false positive, clean. Open a sample to see each match in its surroundings; the strings that matched light up in the rule. Search and filter large runs.',
+            example: 'Synthetic — Windows PE   pe_downloader.exe   ● detected  ($api_dl, $ua, $hex_url)\nBenign — documents        42 samples          ● clean',
             keys: [['Ctrl+Shift+Enter', 'run the tests']],
-            try: { label: 'Open the Test panel', run: () => this.toggleTests(true) } });
+            try: { label: 'Open the Test panel', run: () => { loadDemo(); this.toggleTests(true); } } });
+        // the host's own steps (its panels around the editor, e.g. Rulezet's external checks)
+        let hostSteps = [];
+        try { hostSteps = (typeof this.options.tutorialSteps === 'function' ? this.options.tutorialSteps(this) : this.options.tutorialSteps) || []; }
+        catch { hostSteps = []; }
         if (this._serverEnabled()) steps.push({ title: `Checked by ${this.host.name}`, target: q('.rze-status-server'),
             body: `When you stop typing, the whole document is also compiled by ${this.host.name} (the real compiler, with the rules your rules depend on). Its answer shows here and as underlines.`,
+            example: `✓ ${this.host.name}: 1 rule compiled   |   ✗ line 12: undefined identifier "pe" (import "pe" missing)`,
             keys: [['Ctrl+Enter', 'check now']],
             try: { label: 'Check now', run: () => this.validate() } });
+        if (this._checksEnabled()) steps.push({ title: 'Every check in one panel', target: btn(t('checks')),
+            body: `The Checks panel puts every opinion on the document side by side, one section each: first ${this.host.name}'s own check — the one that decides whether the rules can be saved — then the host's external tools, when it has some (in Rulezet: YARA-X, the CCCS YARA metadata standard, yaraQA). Those only advise and never block saving.\n\nClick a remark to jump to its line. YARA-X can reformat the document and CCCS can rewrite the meta section (generated id, fingerprint, sorted fields): "Apply" does it, while the text is still the one that was checked.`,
+            example: `${this.host.name} — its own check        ✓ valid\nYARA-X                                   2 remarks   line 9: unused pattern $c\nCCCS YARA standard                       4 remarks   status: missing required metadata\nyaraQA                                   1 remark    nocase on a string without letters`,
+            try: { label: 'Run the checks on the example', run: () => { loadDemo(); this.toggleChecks(true); } } });
         steps.push(
             { title: 'Undo, search, commands', target: () => this.undoBtn,
               body: 'Undo and redo any change (also the ones the panels make). Search and replace with regular expressions. The command palette lists every action of the editor with its shortcut.',
+              example: 'Ctrl+F   "URLDownload"  →  3 results     |     Ctrl+Shift+P   "format"  →  Format the document',
               keys: [['Ctrl+Z / Ctrl+Shift+Z', 'undo / redo'], ['Ctrl+F', 'search and replace'], ['Ctrl+Shift+P or F1', 'command palette']],
               try: { label: 'Open the command palette', run: () => this.openPalette() } },
             { title: 'Your workspace', target: btn(t('fullscreen')),
               body: 'Light or dark theme, line wrapping, full screen. Every panel can be resized with the mouse (drag its edge; double-click to reset), and so can the editor itself (drag the bar under it). Your choices are remembered.',
-              keys: [['Alt+Z', 'wrap lines'], ['Esc', 'leave full screen']] },
+              keys: [['Alt+Z', 'wrap lines'], ['Esc', 'leave full screen']],
+              try: { label: 'Toggle line wrapping', run: () => this.toggleLineWrapping() } },
+            { title: 'Credits & licences', target: () => this.root.querySelector(`.rze-toolbar button[aria-label="${t('credits')}"]`),
+              body: 'Everything the editor is built on, and what the host adds around it (tests, external checks…), with each project\'s licence.',
+              try: { label: 'Open the credits', run: () => this.openCredits() } },
+            ...hostSteps,
             { title: 'All shortcuts', target: null,
               body: 'That\'s it. The shortcuts below are also in the command palette.',
               keys: [['Ctrl+Space', 'suggestions'], ['F12 / Ctrl+Click', 'definition'], ['F2', 'rename'], ['Shift+Alt+F', 'format'],
@@ -824,13 +937,14 @@ export class RulezetEditor {
         this.problemsEl = h('div', { class: 'rze-problems', 'aria-label': t('problems') });
         this.testsEl = h('div', { class: 'rze-tests', 'aria-label': t('tests'), hidden: true });
         this.tryEl = h('div', { class: 'rze-tests rze-try', 'aria-label': t('try'), hidden: true });
+        this.checksEl = h('div', { class: 'rze-tests rze-checks', 'aria-label': t('checks'), hidden: true });
         this.statusEl = h('div', { class: 'rze-status' });
         this.toastEl = h('div', { class: 'rze-toast', role: 'status', 'aria-live': 'polite' });
 
         const main = h('div', { class: 'rze-main' }, this.editorEl, this.outlineEl, this.fieldsEl);
         this.root.append(
             this.options.toolbar ? this.toolbarEl : '',
-            this.bannerEl, main, this.problemsEl, this.tryEl, this.testsEl,
+            this.bannerEl, main, this.problemsEl, this.checksEl, this.tryEl, this.testsEl,
             this.options.statusBar ? this.statusEl : '',
             this.toastEl,
         );
@@ -850,6 +964,7 @@ export class RulezetEditor {
         resizable(this.problemsEl, { axis: 'y', key: 'problems', min: 80, max: tall });
         resizable(this.testsEl, { axis: 'y', key: 'tests', min: 140, max: tall });
         resizable(this.tryEl, { axis: 'y', key: 'try', min: 140, max: tall });
+        resizable(this.checksEl, { axis: 'y', key: 'checks', min: 140, max: tall });
         resizable(this.root, { axis: 'y', side: 'after', key: 'editor', min: 260, max: () => window.innerHeight * 3,
             onResize: () => this.view && this.view.requestMeasure() });
         this._renderToolbar();
@@ -1354,6 +1469,8 @@ export class RulezetEditor {
             }
             if (pasted.length) queueMicrotask(() => this._lockPasted(pasted));
         }
+        // Checks: the results now describe an older text — say so (once), Apply is disabled
+        if (update.docChanged && this._checks.open && this._checks.text !== null && !this._checks.stale) this._renderChecks();
         if (update.docChanged && this._try.open) {
             clearTimeout(this._timers.try);
             this._timers.try = setTimeout(() => this._runTry(), 300);
@@ -1423,6 +1540,7 @@ export class RulezetEditor {
             this.pack.actions ? btn('tools', t('ruleTools'), () => this.openRuleTools(), false, `${t('ruleTools')} (Ctrl+Shift+R)`) : '',
             this.pack.templates && this.pack.templates.length && !this.options.readOnly ? btn('plus', t('templates'), () => this.openTemplates(), false, t('tplTitle')) : '',
             this.pack.debug ? btn('search', t('try'), () => this.toggleTry(), this._try.open, `${t('tryTitle')} (Ctrl+Shift+Y)`) : '',
+            this._checksEnabled() ? btn('ok', t('checks'), () => this.toggleChecks(), this._checks.open, t('checksTitle')) : '',
             this.pack.format ? btn('format', t('format'), () => this.format(), false, `${t('format')} (Shift+Alt+F)`) : '',
             this.pack.splitRules ? btn('outline', t('outline'), () => this.toggleOutline(), this._outlineOpen, `${t('outline')} (Ctrl+Shift+O)`) : '',
             btn('problems', t('problems'), () => this.toggleProblems(), this._problemsOpen, `${t('problems')} (Ctrl+Shift+M)`),
@@ -1972,6 +2090,19 @@ export class RulezetEditor {
         this._renderToolbar();
     }
 
+    _outlineView() {
+        if (!this._outlineState) {
+            let compact = false;
+            try { compact = localStorage.getItem('rulezet-editor:outline-compact') === '1'; } catch { /* storage blocked */ }
+            this._outlineState = { compact, flipped: new Set(), expanded: new Set() };
+        }
+        return this._outlineState;
+    }
+
+    _saveOutlineView() {
+        try { localStorage.setItem('rulezet-editor:outline-compact', this._outlineView().compact ? '1' : '0'); } catch { /* storage blocked */ }
+    }
+
     _renderOutline() {
         if (!this._outlineOpen || !this.view) return;
         renderOutline(this.outlineEl, this._rules || [], {
@@ -1992,6 +2123,13 @@ export class RulezetEditor {
             },
             onClose: () => this.toggleOutline(false),
             activeFrom: this._activeRuleFrom,
+            // titles only / details (remembered per viewer), one rule's details flipped, long lists in full
+            compact: this._outlineView().compact,
+            onCompact: () => { const v = this._outlineView(); v.compact = !v.compact; v.flipped.clear(); this._saveOutlineView(); this._renderOutline(); },
+            flipped: this._outlineView().flipped,
+            onFlip: (key) => { const f = this._outlineView().flipped; f.has(key) ? f.delete(key) : f.add(key); this._renderOutline(); },
+            expanded: this._outlineView().expanded,
+            onExpand: (key) => { const x = this._outlineView().expanded; x.has(key) ? x.delete(key) : x.add(key); this._renderOutline(); },
         });
         this._highlightActiveRule();
     }
@@ -2370,16 +2508,8 @@ function renamePanel(editor) {
 const WRAP_KEY = 'rulezet-editor:wrap';
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// CodeMirror's search bar texts (English is built in)
-const SEARCH_PHRASES = {
-    fr: {
-        'Find': 'Rechercher', 'Replace': 'Remplacer', 'next': 'suivant', 'previous': 'précédent', 'all': 'tout',
-        'match case': 'respecter la casse', 'regexp': 'regex', 'by word': 'mot entier', 'replace': 'remplacer',
-        'replace all': 'tout remplacer', 'close': 'fermer', 'current match': 'occurrence courante',
-        'replaced $ matches': '$ occurrences remplacées', 'replaced match on line $': 'occurrence remplacée ligne $',
-        'on line': 'ligne', 'Go to line': 'Aller à la ligne', 'go': 'aller',
-    },
-};
+// CodeMirror's search bar texts: English, built in (add a locale here when the editor gets one)
+const SEARCH_PHRASES = {};
 
 /** Fresh RFC 4122 v4 uuid, like Rulezet's uuid.uuid4(). */
 export function uuid4() {

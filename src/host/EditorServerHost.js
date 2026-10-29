@@ -16,6 +16,7 @@
  *   GET  /fields?format=                  -> { fields }               (Fields panel)
  *   GET  /fields/suggest?format=&field=&q= -> { results }
  *   GET  /fields/browse?format=&field=&path=&page= -> { folders, items, has_more }
+ *   POST /external-checks { format, text } -> { results: { tool: result } }   (host's extra tools)
  */
 import { HttpHost } from './HostAdapter.js';
 
@@ -83,7 +84,21 @@ export class EditorServerHost extends HttpHost {
         return this._request(`/test/${encodeURIComponent(runId)}`, { headers: this._headers(false) }, { allow: [] });
     }
 
-    async getRule(language, name) {
+    async externalChecks(language, text) {
+        try {
+            const data = await this._request('/external-checks', {
+                method: 'POST',
+                headers: this._headers(true),
+                body: JSON.stringify({ format: this.format(language), text }),
+            }, { allow: [], timeout: 60000 });          // the tools can take a few seconds on a big document
+            return data.results || {};
+        } catch (e) {
+            if (e.status === 404) return {};               // a server without external tools (standalone)
+            throw e;
+        }
+    }
+
+        async getRule(language, name) {
         const params = new URLSearchParams({ format: this.format(language) });
         try {
             return await this._request(`/rules/${encodeURIComponent(name)}?${params}`, { headers: this._headers(false) });
