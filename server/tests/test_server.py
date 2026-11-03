@@ -74,15 +74,15 @@ def test_local_backend_compiles_yara():
     result = backend.validate('yara', BROKEN)
     assert result['valid'] is False and result['items'][0]['line'] in (3, 4)
     assert '$missing' in result['items'][0]['message']
-    assert backend.validate('sigma', 'title: x') is None
+    assert backend.validate('suricata', 'alert ip any any -> any any (sid:1;)') is None
 
 
 def test_chain_falls_back_to_rulezet_for_formats_not_compiled_here():
-    remote = FakeRulezet({'/api/rule/public/validate': (200, {'valid': False, 'errors': ['line 1: bad sigma'], 'warnings': []})})
+    remote = FakeRulezet({'/api/rule/public/validate': (200, {'valid': False, 'errors': ['line 1: bad suricata'], 'warnings': []})})
     chain = ChainBackend(LocalBackend(), remote)
     assert chain.validate('yara', VALID)['valid'] is True
     assert remote.requests == []
-    assert chain.validate('sigma', 'x')['items'][0]['message'] == 'bad sigma'
+    assert chain.validate('suricata', 'x')['items'][0]['message'] == 'bad suricata'
     assert len(remote.requests) == 1
 
 
@@ -124,7 +124,7 @@ def test_blueprint_validate():
     assert res.status_code == 200 and res.json['valid'] is False
     assert c.post('/editor-api/validate', json={'format': 'yara', 'content': VALID}).json['valid'] is True
     assert c.post('/editor-api/validate', json={'content': VALID}).status_code == 400
-    assert c.post('/editor-api/validate', json={'format': 'sigma', 'content': 'x'}).status_code == 404
+    assert c.post('/editor-api/validate', json={'format': 'suricata', 'content': 'x'}).status_code == 404
     assert c.post('/editor-api/validate', data='garbage', content_type='application/json').status_code == 400
     big = 'a' * (512 * 1024 + 1)
     assert c.post('/editor-api/validate', json={'format': 'yara', 'content': big}).status_code == 413
@@ -200,3 +200,22 @@ def test_field_browse():
     assert c.get('/editor-api/fields/browse?format=yara&field=tags').json == {'folders': [{'id': 'misp', 'label': 'misp', 'count': 3}], 'items': [], 'has_more': False}
     assert c.get('/editor-api/fields/browse?format=yara&field=tags&path=Public/misp%253Aa&page=2').json['has_more'] is True
     assert seen[-1] == ('tags', ['Public', 'misp:a'], 2)
+
+
+def test_split_yaml_documents_gives_each_rule_and_its_first_line():
+    from rulezet_editor.validators import split_yaml_documents
+    text = 'title: a\nx: 1\n---\n\ntitle: b\n---\n# only a comment\n'
+    assert split_yaml_documents(text) == [(1, 'title: a\nx: 1\n'), (5, 'title: b\n')]
+
+
+def test_local_backend_validates_sigma_with_pysigma_when_installed():
+    import pytest
+    pytest.importorskip('sigma')
+    backend = LocalBackend()
+    good = ("title: T\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nlogsource:\n    category: process_creation\n    product: windows\n"
+            "detection:\n    selection:\n        Image: x\n    condition: selection\n")
+    assert backend.validate('sigma', good)['valid'] is True
+    broken = good + '---\n' + good.replace('condition: selection', 'condition: nothing')
+    result = backend.validate('sigma', broken)
+    assert result['valid'] is False
+    assert result['items'][0]['line'] == 11

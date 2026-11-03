@@ -84,6 +84,9 @@ src/wrappers/vue.js          createVueComponent(Vue) for Vue 3 UMD pages
 src/styles/                  rulezet-editor.css (light and dark variables)
 src/languages/_template/     starting point for a new pack
 src/languages/plain/         fallback pack
+src/languages/sigma/         Sigma pack (YAML): yaml.js (offsets-keeping reader), parser.js, lint.js
+                             (Rulezet's verdict: schema + pySigma), completion, navigation, actions,
+                             templates, tutorial (docs/rulezet/sigma.md)
 src/languages/yara/          reference pack:
     lexer.js                 whole-document tokens with offsets
     parser.js                error-tolerant parser, several rules per document
@@ -107,6 +110,7 @@ server/tests/                pytest
 pyproject.toml               Python package (installable from the submodule)
 test/                        *.test.js, run by node --test
 test/fixtures/yara-oracle.json  cases with libyara's verdict (scripts/yara-oracle/build.py)
+test/fixtures/sigma-oracle.json cases with Rulezet's Sigma verdict (scripts/sigma-oracle/: export.mjs, build.py)
 playground/                  demo page and samples
 scripts/                     build.mjs, dev.mjs
 docs/                        design, language-pack reference, host adapter, integration
@@ -126,6 +130,8 @@ docs/rulezet/                one file per feature: how it is integrated into Rul
 - The YARA lint follows libyara 4.5 (the compiler Rulezet uses): an error only when the compiler
   refuses the rule. Every new check gets a case in `scripts/yara-oracle/cases.py`, rebuilt with
   yara-python. Rules missing from the document stay warnings (Rulezet may have them).
+- The Sigma lint follows Rulezet's validation (its JSON schema + pySigma, HIGH issues refused):
+  an error only when Rulezet refuses the rule. New check -> a case in `scripts/sigma-oracle/cases.py`.
 - No colors in JS or in templates: add a `--rze-*` variable in the CSS (light and dark).
 - New UI text goes through `src/core/i18n.js` (English, French).
 - Integrated mode never calls rulezet.org: it uses the local Rulezet through `FunctionBackend`.

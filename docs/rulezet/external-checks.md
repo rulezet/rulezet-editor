@@ -1,5 +1,11 @@
 # Checks panel and external checks (YARA-X, CCCS standard, yaraQA)
 
+> YARA also has `duplicates` ("Already in Rulezet?", `external_checks.check_duplicates`): the rules of Rulezet containing
+> the document's longest strings (trigram index of the rule text), compared by strings + condition (string
+> names ignored): a copy (red), same strings with another condition or 80 % in common (orange).
+>
+> Sigma has its own tools (SIEM conversion, SigmaHQ conventions, sigmalint, rsigma): [sigma.md](sigma.md#external-checks-checks-panel-create-step-external).
+
 The **Checks** button of the toolbar opens a panel with one section per check of the document:
 
 1. **the host's own check** (in Rulezet: its compiler, with the rules the document needs) — the

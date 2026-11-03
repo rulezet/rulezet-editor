@@ -1,5 +1,8 @@
 # YARA editor tab (create page)
 
+The "Sigma editor" tab (`?tab=sigma_editor`) is the same panel with `format="sigma"`: same flow, Sigma
+checks, no dependencies, no samples — see [sigma.md](sigma.md).
+
 `/rule/create_rule?tab=yara_editor`: a full editor for one or several YARA rules, with live
 errors (lint checked against libyara + Rulezet's compiler), rule name completion from the
 database, rule tools and drafts.

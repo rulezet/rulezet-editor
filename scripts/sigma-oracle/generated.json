@@ -1,0 +1,102 @@
+[
+ {
+  "name": "sample",
+  "text": "title: Suspicious Certutil Download\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: Certutil used to download a file from the Internet\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Certutil/\nauthor: you\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\certutil.exe'\n        - OriginalFileName: 'CertUtil.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'urlcache'\n            - 'verifyctl'\n    condition: all of selection_*\nfalsepositives:\n    - Administrators downloading certificates\nlevel: high\n",
+  "expect": true
+ },
+ {
+  "name": "skeleton",
+  "text": "title: My new rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndate: 2026-11-03\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\change_me.exe'\n    condition: selection\nlevel: medium\n",
+  "expect": true
+ },
+ {
+  "name": "template win-process-creation",
+  "text": "title: Suspicious Tool Execution With Encoded Command\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A tool started with an encoded command, as seen in intrusions\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\powershell.exe'\n        - OriginalFileName: 'PowerShell.EXE'\n    selection_cli:\n        CommandLine|contains:\n            - ' -enc '\n            - ' -EncodedCommand '\n    filter_main_parent:\n        ParentImage|endswith: '\\legit_updater.exe'\n    condition: all of selection_* and not 1 of filter_main_*\nfalsepositives:\n    - Administrative scripts\nlevel: high\n",
+  "expect": true
+ },
+ {
+  "name": "template win-parent-child",
+  "text": "title: Office Application Spawning A Shell\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: An Office application starting a command shell, typical of a malicious macro\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.execution\n    - attack.t1204.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_parent:\n        ParentImage|endswith:\n            - '\\winword.exe'\n            - '\\excel.exe'\n            - '\\powerpnt.exe'\n    selection_child:\n        Image|endswith:\n            - '\\cmd.exe'\n            - '\\powershell.exe'\n            - '\\wscript.exe'\n            - '\\mshta.exe'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n",
+  "expect": true
+ },
+ {
+  "name": "template win-registry-set",
+  "text": "title: Run Key Set From A Temporary Folder\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A Run key value pointing to a program in a temporary folder\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.persistence\n    - attack.t1547.001\nlogsource:\n    category: registry_set\n    product: windows\ndetection:\n    selection:\n        TargetObject|contains: '\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'\n        Details|contains:\n            - '\\AppData\\Local\\Temp\\'\n            - '\\Windows\\Temp\\'\n    condition: selection\nfalsepositives:\n    - Installers that register a first run from a temporary folder\nlevel: medium\n",
+  "expect": true
+ },
+ {
+  "name": "template win-file-event",
+  "text": "title: Script Dropped In The Startup Folder\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A script file written in a Startup folder, run at each logon\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.persistence\n    - attack.t1547.001\nlogsource:\n    category: file_event\n    product: windows\ndetection:\n    selection:\n        TargetFilename|contains: '\\Start Menu\\Programs\\Startup\\'\n        TargetFilename|endswith:\n            - '.vbs'\n            - '.js'\n            - '.bat'\n            - '.ps1'\n    condition: selection\nfalsepositives:\n    - Legitimate logon scripts\nlevel: medium\n",
+  "expect": true
+ },
+ {
+  "name": "template win-network",
+  "text": "title: Notepad Initiating A Network Connection\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: Notepad opening an outbound connection, often a sign of process injection\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1071\nlogsource:\n    category: network_connection\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\notepad.exe'\n        Initiated: 'true'\n    filter_main_local:\n        DestinationIp|cidr:\n            - '10.0.0.0/8'\n            - '172.16.0.0/12'\n            - '192.168.0.0/16'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Unknown\nlevel: high\n",
+  "expect": true
+ },
+ {
+  "name": "template win-security-event",
+  "text": "title: Member Added To A Privileged Group\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A user added to the Domain Admins or Enterprise Admins group\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.persistence\n    - attack.t1098\nlogsource:\n    product: windows\n    service: security\ndetection:\n    selection:\n        EventID:\n            - 4728\n            - 4732\n            - 4756\n        TargetUserName:\n            - 'Domain Admins'\n            - 'Enterprise Admins'\n    condition: selection\nfalsepositives:\n    - Planned administrative changes\nlevel: high\n",
+  "expect": true
+ },
+ {
+  "name": "template win-powershell-script",
+  "text": "title: PowerShell Download And Execute\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A script block that downloads a payload and runs it in memory\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: ps_script\n    product: windows\n    definition: 'Script Block Logging must be enabled'\ndetection:\n    selection:\n        ScriptBlockText|contains|all:\n            - 'Net.WebClient'\n            - 'DownloadString'\n            - 'Invoke-Expression'\n    condition: selection\nfalsepositives:\n    - Software installers written in PowerShell\nlevel: high\n",
+  "expect": true
+ },
+ {
+  "name": "template linux-process",
+  "text": "title: Reverse Shell Through Bash TCP Redirection\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: Bash connecting its input and output to a remote host\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.execution\n    - attack.t1059.004\nlogsource:\n    category: process_creation\n    product: linux\ndetection:\n    selection:\n        CommandLine|contains:\n            - '/dev/tcp/'\n            - '/dev/udp/'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n",
+  "expect": true
+ },
+ {
+  "name": "template linux-auditd",
+  "text": "title: Kernel Module Loaded With Insmod\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A kernel module loaded by hand, as rootkits do\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.persistence\n    - attack.t1547.006\nlogsource:\n    product: linux\n    service: auditd\ndetection:\n    selection:\n        type: 'EXECVE'\n        a0:\n            - 'insmod'\n            - 'modprobe'\n    condition: selection\nfalsepositives:\n    - Driver installation by administrators\nlevel: medium\n",
+  "expect": true
+ },
+ {
+  "name": "template dns-query",
+  "text": "title: DNS Query To A File Sharing Service\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A host resolving a file sharing domain often used for exfiltration\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.exfiltration\n    - attack.t1567.002\nlogsource:\n    category: dns_query\n    product: windows\ndetection:\n    selection:\n        QueryName|endswith:\n            - '.transfer.sh'\n            - '.anonfiles.com'\n    condition: selection\nfalsepositives:\n    - Legitimate use of these services\nlevel: medium\n",
+  "expect": true
+ },
+ {
+  "name": "template proxy",
+  "text": "title: Request With A Scripting User Agent\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: An HTTP request made with the default user agent of a scripting tool\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1071.001\nlogsource:\n    category: proxy\ndetection:\n    selection:\n        c-useragent|startswith:\n            - 'python-requests/'\n            - 'Go-http-client/'\n            - 'curl/'\n    condition: selection\nfalsepositives:\n    - Internal scripts and monitoring tools\nlevel: low\n",
+  "expect": true
+ },
+ {
+  "name": "template webserver",
+  "text": "title: Path Traversal In A Web Request\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A request trying to read files outside the web root\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.initial-access\n    - attack.t1190\nlogsource:\n    category: webserver\ndetection:\n    selection:\n        cs-uri-query|contains:\n            - '../../'\n            - '..%2f..%2f'\n            - '%2e%2e%2f'\n    condition: selection\nfalsepositives:\n    - Vulnerability scanners run by the security team\nlevel: medium\n",
+  "expect": true
+ },
+ {
+  "name": "template aws-cloudtrail",
+  "text": "title: CloudTrail Logging Stopped\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: Someone stopped or deleted a CloudTrail trail to hide their activity\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.defense-evasion\n    - attack.t1562.008\nlogsource:\n    product: aws\n    service: cloudtrail\ndetection:\n    selection:\n        eventSource: 'cloudtrail.amazonaws.com'\n        eventName:\n            - 'StopLogging'\n            - 'DeleteTrail'\n            - 'UpdateTrail'\n    condition: selection\nfalsepositives:\n    - Planned changes of the logging configuration\nlevel: high\n",
+  "expect": true
+ },
+ {
+  "name": "template keywords",
+  "text": "title: Exploit Strings In Application Logs\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: Strings of a known exploit written by the application\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.initial-access\n    - attack.t1190\nlogsource:\n    product: jvm\ndetection:\n    keywords:\n        - 'jndi:ldap://'\n        - 'jndi:rmi://'\n    condition: keywords\nfalsepositives:\n    - Unknown\nlevel: high\n",
+  "expect": true
+ },
+ {
+  "name": "snippet sigma rule",
+  "text": "title: Title of what is detected\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: What the rule detects and why\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: medium\n",
+  "expect": true
+ },
+ {
+  "name": "tutorial 4",
+  "text": "title: Certutil Used To Download A File\nid: 6f0b2b8a-0f0e-4c63-9a5c-3d6b1c2e4f10\nstatus: experimental\ndescription: Certutil, a Windows certificate tool, downloading a file from the Internet (a \"living off the land\" download, tutorial example)\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Certutil/\nauthor: Your Name\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\certutil.exe'\n        - OriginalFileName: 'CertUtil.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'urlcache'\n            - 'verifyctl'\n    condition: all of selection_*\n",
+  "expect": true
+ },
+ {
+  "name": "tutorial 5",
+  "text": "title: Certutil Used To Download A File\nid: 6f0b2b8a-0f0e-4c63-9a5c-3d6b1c2e4f10\nstatus: experimental\ndescription: Certutil, a Windows certificate tool, downloading a file from the Internet (a \"living off the land\" download, tutorial example)\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Certutil/\nauthor: Your Name\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\certutil.exe'\n        - OriginalFileName: 'CertUtil.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'urlcache'\n            - 'verifyctl'\n    filter_optional_localhost:\n        CommandLine|contains: 'http://127.0.0.1'\n    condition: all of selection_* and not 1 of filter_optional_*\n",
+  "expect": true
+ },
+ {
+  "name": "tutorial 6",
+  "text": "title: Certutil Used To Download A File\nid: 6f0b2b8a-0f0e-4c63-9a5c-3d6b1c2e4f10\nstatus: experimental\ndescription: Certutil, a Windows certificate tool, downloading a file from the Internet (a \"living off the land\" download, tutorial example)\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Certutil/\nauthor: Your Name\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\certutil.exe'\n        - OriginalFileName: 'CertUtil.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'urlcache'\n            - 'verifyctl'\n    filter_optional_localhost:\n        CommandLine|contains: 'http://127.0.0.1'\n    condition: all of selection_* and not 1 of filter_optional_*\nfalsepositives:\n    - Administrators downloading certificates with certutil\nlevel: high\n",
+  "expect": true
+ }
+]

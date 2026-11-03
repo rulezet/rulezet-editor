@@ -327,7 +327,16 @@ function sampleRow(smp, state, { t, profile, onHit, onToggleSample }) {
                             h('td', { class: 'rze-mono', text: where(hit, profile) }),
                             h('td', { class: 'rze-mono', text: hit.where.length != null ? `${hit.where.length} B` : '' }),
                             h('td', {}, contextView(hit)))))))
-                : h('div', { class: 'rze-tests-muted rze-tests-cond', text: t('tConditionOnly') }))));
+                : x.hits[0].where && x.hits[0].where.kind === 'event'
+                    // log formats (Sigma): one row per matching event, with the fields the rule looked at
+                    ? h('div', { class: 'rze-tests-hits-wrap', 'data-scroll-key': `${smp.id}\u0000${x.rule}\u0000${x.item}` },
+                        h('table', { class: 'rze-tests-hits' },
+                            h('thead', {}, h('tr', {}, h('th', { class: 'rze-col-offset', text: t('tEvent') }), h('th', { text: t('tFields') }))),
+                            h('tbody', {}, ...x.hits.map(hit => h('tr', { title: t('tShowInRule'), onclick: () => onHit(hit, smp.id) },
+                                h('td', { class: 'rze-mono', text: `#${hit.where.index + 1}` }),
+                                h('td', { class: 'rze-mono rze-tests-fields' }, ...Object.entries(hit.where.fields || {}).map(([k, v]) =>
+                                    h('div', {}, h('b', { text: `${k}: ` }), h('span', { text: v })))))))))
+                    : h('div', { class: 'rze-tests-muted rze-tests-cond', text: t('tConditionOnly') }))));
     return h('div', { class: `rze-tests-item${focused ? ' rze-focused' : ''}` }, row, detail);
 }
 

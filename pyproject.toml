@@ -10,8 +10,9 @@ dependencies = ["flask>=2.3"]
 
 [project.optional-dependencies]
 yara = ["yara-python>=4.3"]
+sigma = ["pysigma>=0.11"]
 test = ["rulezet-tester @ git+https://github.com/rulezet/rulezet-tester.git"]
-dev = ["pytest>=7", "yara-python>=4.3"]
+dev = ["pytest>=7", "yara-python>=4.3", "pysigma>=0.11"]
 
 [project.scripts]
 rulezet-editor = "rulezet_editor.cli:main"

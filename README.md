@@ -4,12 +4,12 @@
 
 # rulezet-editor
 
-A standalone, pluggable editor for detection rules (YARA first; Sigma, Suricata, Zeek, Wazuh, ... next).
+A standalone, pluggable editor for detection rules (YARA and Sigma; Suricata, Zeek, Wazuh, ... next).
 
 It is built for [Rulezet](https://github.com/ngsoti/rulezet-core) but is not tied to it: the same
 editor runs in any web page, in MISP, in an internal SOC tool or in a VS Code webview.
 
-> Status: 0.1.0, first working version with the YARA language pack.
+> Status: 0.1.0, YARA and Sigma language packs (Sigma: [docs/rulezet/sigma.md](docs/rulezet/sigma.md)).
 > Architecture: [docs/design.md](docs/design.md). How it works inside, step by step: [docs/how-it-works.md](docs/how-it-works.md).
 
 <img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/9fcec851-0016-4d79-834a-3b2893180acf" />
@@ -110,8 +110,8 @@ src/core/        editor class, registry, theme, events, i18n
 src/ui/          rules panel, problems panel, command palette (plain DOM)
 src/host/        host adapter base class and the Rulezet adapter
 src/wrappers/    Vue 3 component
-src/languages/   yara/, plain/, _template/
-test/            YARA tests and the conformance suite every pack must pass
+src/languages/   yara/, sigma/, plain/, _template/
+test/            YARA and Sigma tests (each with its oracle) and the conformance suite every pack must pass
 playground/      demo page (npm run dev)
 dist/            prebuilt files for pages without a build step
 ```

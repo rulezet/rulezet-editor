@@ -37,7 +37,7 @@ import { renderOutline } from '../ui/outline.js';
 import { renderProblems } from '../ui/problems.js';
 import { renderTests, testOutcome } from '../ui/tests.js';
 import { renderTry } from '../ui/try.js';
-import { renderChecks } from '../ui/checks.js';
+import { renderChecks, TOOLS as CHECK_TOOLS } from '../ui/checks.js';
 import { TemplateGallery, numberSnippetFields } from '../ui/templates.js';
 import { markdown } from '../ui/markdown.js';
 import { CORE_CREDITS } from './credits.js';
@@ -534,7 +534,8 @@ export class RulezetEditor {
         renderChecks(this.checksEl, C, {
             t: this.t,
             hostName: this.host.has('validate') ? this.host.name : null,
-            toolNames: this.host.has('externalChecks') ? ['YARA-X', 'CCCS YARA standard', 'yaraQA'].filter((_, i) => !C.tools || Object.keys(C.tools).includes(['yarax', 'cccs', 'yaraqa'][i])) : [],
+            // the host's tools for this format (known once a run answered)
+            toolNames: this.host.has('externalChecks') && C.tools ? Object.keys(C.tools).map(id => (CHECK_TOOLS[id] || { name: id }).name) : [],
             onRun: () => this.runChecks(),
             onClose: () => this.toggleChecks(false),
             onGoto: (line) => this.goTo(line),
@@ -1315,7 +1316,8 @@ export class RulezetEditor {
         const body = lines.filter(l => !/^\s*import\s+"/.test(l)).join('\n').trim();
         const have = new Set((model.imports || []).map(i => `import "${i.name}"`));
         const missing = imports.filter(i => !have.has(i));
-        const changes = [{ from: at, to: at, insert: body + '\n\n' }];
+        // between two rules: a blank line (YARA), or the pack's separator (Sigma: a --- line)
+        const changes = [{ from: at, to: at, insert: body + '\n' + (this.pack.ruleSeparator || '\n') }];
         if (missing.length) {
             const last = (model.imports || [])[model.imports.length - 1];
             const pos = last ? this.view.state.doc.lineAt(last.to).to : 0;
@@ -1666,7 +1668,7 @@ export class RulezetEditor {
 
     /** Strings / condition edited in the panel: written into the rule (created first when there is none). */
     _editBody(name, make) {
-        if (!name || !this.pack.body) return;
+        if (!name || !(this.pack.body || this.pack.selections)) return;
         let target = name;
         if (name === DRAFT) target = this._createRuleFromFields({ strings: false });   // the form adds the strings itself
         if (!target) return;
@@ -1780,6 +1782,14 @@ export class RulezetEditor {
         return at ? at.name : (rules.length === 1 ? rules[0].name : null);
     }
 
+    /** What the format's selections section shows for this rule (or the skeleton's, before any rule). */
+    _selectionsView(name) {
+        const S = this.pack.selections;
+        let data = name === DRAFT ? null : S.read(this.getModel(), name);
+        if (!data) data = { logsource: { category: '', product: '', service: '' }, searches: [], condition: '' };
+        return { data, spec: S, fields: S.fields(data.logsource) };
+    }
+
     _renderFields() {
         const F = this._fields;
         if (!F.open || !this.view) return;
@@ -1798,6 +1808,8 @@ export class RulezetEditor {
             splitCondition: this.pack.body && this.pack.body.splitCondition,
             joinCondition: this.pack.body && this.pack.body.joinCondition,
             conditionClauses: this.pack.body && this.pack.body.clauses,
+            // the format's own section (Sigma: log source, search identifiers, condition)
+            selections: this.pack.selections && name ? this._selectionsView(name) : null,
             state, locked: name ? this._locks.has(name) : false, loading: F.loading, error: F.error, suggest: F.suggest, ui: F.ui,
             statusOf: (def) => fieldStatus(def, state, ruleValueOf(def), name === DRAFT ? null : name), ruleValueOf,
             metaKeyOf: (def) => this._metaKeyFor(name, def),
@@ -1841,7 +1853,14 @@ export class RulezetEditor {
             onString: (index, s) => this._editBody(name, (model, rule) => this.pack.body.setString(model, rule, index, s)),
             onStringRemove: (index) => this._editBody(name, (model, rule) => this.pack.body.removeString(model, rule, index)),
             onCondOp: (op) => { F.ui = { ...F.ui, condOp: op }; this._renderFields(); },
-            onCondition: (text) => this._editBody(name, (model, rule) => this.pack.body.setCondition(model, rule, text)),
+            onCondition: (text) => this._editBody(name, (model, rule) => (this.pack.body || this.pack.selections).setCondition(model, rule, text)),
+            onLogsource: (key, value) => this._editBody(name, (model, rule) => this.pack.selections.setLogsource(model, rule, key, value)),
+            onSearch: (index, search) => this._editBody(name, (model, rule) => {
+                const changes = this.pack.selections.setSearch(model, rule, index, search);
+                if (!changes) this._toast(this.t('selRefused', { name: search.name }), 'warning');
+                return changes;
+            }),
+            onSearchRemove: (index) => this._editBody(name, (model, rule) => this.pack.selections.removeSearch(model, rule, index)),
             onFormats: (def) => { F.ui = { ...F.ui, formats: def ? def.id : null }; this._renderFields(); },
             onSelect: (def, query = '', onlyIf = null) => {
                 if (onlyIf && F.ui.select !== onlyIf) return;

@@ -11,6 +11,7 @@ its file exists here.
 | Server validation | [validation.md](validation.md) | `rule_core.validate_rule_syntax` | local compiler, then `POST /api/rule/public/validate` |
 | Rule lookup (completion, hover, external rules) | [rule-lookup.md](rule-lookup.md) | query on `Rule` via `_active()` | `GET /api/rule/public/searchPage` |
 | YARA editor tab (create page) | [create-page.md](create-page.md) | `YaraEditorPanel.js`, saves through `rule.parse_rule` | — |
+| Sigma pack and Sigma editor tab | [sigma.md](sigma.md) | `editor_core.plan_sigma`, `validate` per document, setting `editor.rule_fields` → `sigma`, `YaraEditorPanel` `format="sigma"` | pySigma (`[sigma]` extra), then the public API |
 | Workspace (folders, files) and bundles — **paused**, removed from Rulezet's `editor` branch for now | [workspace.md](workspace.md) | (was `/editor`, `editor_bundle.py`, bundle job step) | — |
 | Fields panel (title, CVE, tags… in the rule or not) | [fields.md](fields.md) | `editor_core.fields` / `suggest` / `apply_fields`, setting `editor.rule_fields` | — |
 | Tests on samples (Test panel, Create step, Samples tab of the rule page) | [testing.md](testing.md) | `editor_core.tests` (rulezet-tester), `sample_test_core`, `RULE_TESTS_*`, setting `editor.test_on_create` | `serve` + rulezet-tester |
@@ -26,7 +27,7 @@ Rulezet side (branch `editor` of rulezet-core):
   `pip install -e` (requirements.txt). install.sh, update.sh, manage.py and launch.sh fetch it.
 - `app/features/editor/editor_core.py`: the `FunctionBackend` (Rulezet's functions).
 - `app/features/editor/editor.py`: the blueprint on `/editor-api`, logged-in users only.
-- `app/static/js/rule/YaraEditorPanel.js`: the "YARA editor" tab of the create page.
+- `app/static/js/rule/YaraEditorPanel.js`: the "YARA editor" and "Sigma editor" tabs of the create page (prop `format`).
 - `tests_new/editor/`: endpoint tests.
 
 New feature: copy [_template.md](_template.md).

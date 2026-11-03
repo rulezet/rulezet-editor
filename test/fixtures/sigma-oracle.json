@@ -1,0 +1,566 @@
+[
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "logsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'title' is a required property"
+ },
+ {
+  "text": "id: 929a690e-bef0-4204-a928-ef5e620d6fcc\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'title' is a required property"
+ },
+ {
+  "text": "title: \nid: x\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "None is not of type 'string'"
+ },
+ {
+  "text": "title: T\nid: not-a-uuid\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "Sigma rule identifier must be an UUID"
+ },
+ {
+  "text": "title: T\nstatus: beta\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'beta' is not valid under any of the given schemas"
+ },
+ {
+  "text": "title: T\nstatus: stable\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: T\ndate: 2024-13-01\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "month must be in 1..12"
+ },
+ {
+  "text": "title: T\ndate: 2024/01/02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: T\ndate: 24-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'24-01-02' does not match '^\\\\d{4}([-\\\\/])(0[1-9]|1[0-2])\\\\1(0[1-9]|[12][0-9]|3[01])$'"
+ },
+ {
+  "text": "title: T\nmodified: 2024-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: T\ntags: attack.execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'attack.execution' is not of type 'array'"
+ },
+ {
+  "text": "title: T\ntags:\n    - attack.execution\n    - attack.execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "['attack.execution', 'attack.execution'] has non-unique elements"
+ },
+ {
+  "text": "title: T\ntags:\n    - Attack.Execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'Attack.Execution' does not match '^[a-z0-9_-]+\\\\.[a-z0-9._-]+$'"
+ },
+ {
+  "text": "title: T\ntags:\n    - attack.privilege_escalation\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: T\ntags:\n    - attack.t1059.001\n    - cve.2024-3094\n    - tlp.clear\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: T\ntags:\n    - attack.foo\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: T\ntags:\n    - foo bar\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'foo bar' does not match '^[a-z0-9_-]+\\\\.[a-z0-9._-]+$'"
+ },
+ {
+  "text": "title: T\nreferences:\n    - https://a\n    - https://a\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "['https://a', 'https://a'] has non-unique elements"
+ },
+ {
+  "text": "title: T\nreferences: https://a\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'https://a' is not of type 'array'"
+ },
+ {
+  "text": "title: T\nfalsepositives:\n    - x\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'x' is too short"
+ },
+ {
+  "text": "title: T\nfalsepositives:\n    - Unknown\n    - Unknown\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "['Unknown', 'Unknown'] has non-unique elements"
+ },
+ {
+  "text": "title: T\nfields:\n    - CommandLine\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: T\nrelated:\n    - id: 929a690e-bef0-4204-a928-ef5e620d6fcc\n      type: derived\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: T\nrelated:\n    - id: 929a690e-bef0-4204-a928-ef5e620d6fcc\n      type: copy\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'copy' is not valid under any of the given schemas"
+ },
+ {
+  "text": "title: T\nrelated:\n    - id: x\n      type: derived\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "Sigma related identifier must be an UUID"
+ },
+ {
+  "text": "title: T\ncustom_field: x\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: T\nauthr: me\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+ },
+ {
+  "text": "title: T\nlevel: severe\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'severe' is not valid under any of the given schemas"
+ },
+ {
+  "text": "title: T\ndescription: |\n    multi\n    line\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: \"Quoted: title\"\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: 'it''s'\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": null
+ },
+ {
+  "text": "title: T\nscope:\n    - x\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\n",
+  "error": "'x' is too short"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": "'logsource' is a required property"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    vendor: acme\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": "Sigma log source can't be empty"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": "'windows' is not of type 'object'"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    product: windows\n    service: sysmon\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    product: windows\n    service: security\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: proxy\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    definition: x\n    product: linux\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    product: windows\n    service: sysmon\ndetection:\n    selection:\n        EventID: 1\n        Image: x\n    condition: selection\nlevel: medium\n",
+  "error": "issue=SpecificInsteadOfGenericLogsourceIssue severity=high description=\"Usage of specific instead of generic log source\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] logsource=SigmaLogSource(category=None, product='windows', service='sysmon', definition=None, source=None, custom_attributes=None) eve"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    product: windows\n    service: sysmon\ndetection:\n    selection:\n        EventID: '1'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    product: windows\n    service: security\ndetection:\n    selection:\n        EventID: 4688\n    condition: selection\nlevel: medium\n",
+  "error": "issue=SpecificInsteadOfGenericLogsourceIssue severity=high description=\"Usage of specific instead of generic log source\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] logsource=SigmaLogSource(category=None, product='windows', service='security', definition=None, source=None, custom_attributes=None) e"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    product: windows\n    service: security\ndetection:\n    selection:\n        EventID:\n            - 4624\n            - 4625\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\nlevel: medium\n",
+  "error": "'detection' is a required property"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\nlevel: medium\n",
+  "error": "'condition' is a required property"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    condition: selection\nlevel: medium\n",
+  "error": "No detections defined in Sigma rule"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition:\nlevel: medium\n",
+  "error": "None is not of type 'string'"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition: selection and\nlevel: medium\n",
+  "error": "Expected end of text, found 'and'  (at char 10), (line:1, col:11)"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition: (selection\nlevel: medium\n",
+  "error": "Expected ')', found end of text  (at char 10), (line:1, col:11)"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition: selection)\nlevel: medium\n",
+  "error": "Expected end of text, found ')'  (at char 9), (line:1, col:10)"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition: selectoin\nlevel: medium\n",
+  "error": "issue=DanglingDetectionIssue severity=high description=\"Rule defines detection that is not referenced from condition\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] detection_name=selection"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    filter:\n        User: y\n    condition: selection\nlevel: medium\n",
+  "error": "issue=DanglingDetectionIssue severity=high description=\"Rule defines detection that is not referenced from condition\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] detection_name=filter"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    filter:\n        User: y\n    condition: selection and not filter\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_a:\n        Image: x\n    selection_b:\n        User: y\n    condition: 1 of selection_*\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_a:\n        Image: x\n    selection_b:\n        User: y\n    condition: all of selection_*\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_a:\n        Image: x\n    selection_b:\n        User: y\n    condition: 2 of selection_*\nlevel: medium\n",
+  "error": "Expected end of text, found 'of'  (at char 2), (line:1, col:3)"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_a:\n        Image: x\n    selection_b:\n        User: y\n    condition: any of selection_*\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_a:\n        Image: x\n    condition: 1 of nothing_*\nlevel: medium\n",
+  "error": "issue=DanglingConditionIssue severity=high description=\"Rule defines a condition that contains references to an unknown detection definition\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] condition_name=nothing_*"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_a:\n        Image: x\n    condition: selection_*\nlevel: medium\n",
+  "error": "Expected end of text, found '*'  (at char 10), (line:1, col:11)"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition: 1 of them\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    filter:\n        User: y\n    condition: all of them\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition: them\nlevel: medium\n",
+  "error": "issue=DanglingDetectionIssue severity=high description=\"Rule defines detection that is not referenced from condition\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] detection_name=selection"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition: selection | count() > 5\nlevel: medium\n",
+  "error": "The pipe syntax in Sigma conditions has been deprecated and replaced by Sigma correlations. pySigma doesn't supports this syntax."
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition:\n        - selection\nlevel: medium\n",
+  "error": "['selection'] is not of type 'string'"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    timeframe: 5m\n    condition: selection\nlevel: medium\n",
+  "error": "'5m' is not valid under any of the given schemas"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|containz: x\n    condition: selection\nlevel: medium\n",
+  "error": "Unknown modifier 'containz'"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|contains|all:\n            - a\n            - b\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith|all:\n            - a\n            - b\n    condition: selection\nlevel: medium\n",
+  "error": "issue=AllWithoutContainsModifierIssue severity=high description=\"A field-bound 'all' modifier without 'contains' modifier doesn't matches anything\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] detection_item=SigmaDetectionItem(parent=None, applied_processing_items=set(), field='Image', modifiers=[<c"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|all:\n            - a\n            - b\n    condition: selection\nlevel: medium\n",
+  "error": "issue=AllWithoutContainsModifierIssue severity=high description=\"A field-bound 'all' modifier without 'contains' modifier doesn't matches anything\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] detection_item=SigmaDetectionItem(parent=None, applied_processing_items=set(), field='Image', modifiers=[<c"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        '|all':\n            - a\n            - b\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|base64offset: x\n    condition: selection\nlevel: medium\n",
+  "error": "issue=Base64OffsetWithoutContainsModifierIssue severity=high description=\"A 'base64offset' modifier must be followed by a 'contains' modifier, because calculated values will be prefixed/suffixed with further characters.\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] detection_item=SigmaDetectionItem("
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|base64offset|contains: x\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|windash|contains|all:\n            - -a\n            - -b\n    condition: selection\nlevel: medium\n",
+  "error": "issue=WindowsDashCombinedWithAllModifierIssue severity=high description=\"The 'windash' modifier cannot be combined with the 'all' modifier, because calculated values will be appended to the same condition which will make it incorrect.\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] detection_item=Sigm"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|windash|contains: -a\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|re: '.*\\.exe'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|re|i: '.*\\.exe'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|i|re: '.*\\.exe'\n    condition: selection\nlevel: medium\n",
+  "error": "Modifier SigmaRegularExpressionIgnoreCaseFlagModifier incompatible to value type of '.\\*\\.exe'"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|exists: true\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|exists: maybe\n    condition: selection\nlevel: medium\n",
+  "error": "Modifier SigmaExistsModifier incompatible to value type of 'maybe'"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Size|gt: 10\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Size|gt: big\n    condition: selection\nlevel: medium\n",
+  "error": "Modifier SigmaGreaterThanModifier incompatible to value type of 'big'"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        DestinationIp|cidr: 10.0.0.0/8\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        DestinationIp|cidr: tenzero\n    condition: selection\nlevel: medium\n",
+  "error": "Invalid CIDR expression: 'tenzero' does not appear to be an IPv4 or IPv6 network"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|contains|contains: x\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|cased: X\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|fieldref: ParentImage\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: \"a\\x01b\"\n    condition: selection\nlevel: medium\n",
+  "error": "issue=ControlCharacterIssue severity=high description=\"String contains control character likely caused by missing (double-)slash\" rules=[929a690e-bef0-4204-a928-ef5e620d6fcc] string=a\u0001b"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image: x\n        - User: y\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    keywords:\n        - a\n        - b\n    condition: keywords\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    keywords: foo\n    condition: keywords\nlevel: medium\n",
+  "error": "'foo' is not valid under any of the given schemas"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n    condition: selection\nlevel: medium\n",
+  "error": "None is not valid under any of the given schemas"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: '*\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: '*evil*'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: []\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: [a, b]\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: null\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        EventID: '4624'\n    condition: selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition: not selection\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    filter_1:\n        User: a\n    filter_2:\n        User: b\n    condition: selection and not 1 of filter_*\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image: x\n    condition: selection and (selection or selection)\nlevel: medium\n",
+  "error": null
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n\tselection:\n        Image: x\n    condition: selection\nlevel: medium\n",
+  "error": "while scanning for the next token\nfound character '\\t' that cannot start any token\n  in \"<unicode string>\", line 9, column 1:\n    \tselection:\n    ^"
+ },
+ {
+  "text": "title: Test rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n---\ntitle: Other rule\nid: 0f0b2b8a-0f0e-4c63-9a5c-3d6b1c2e4f10\nstatus: test\ndate: 2026-01-02\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": "expected a single document in the stream\n  in \"<unicode string>\", line 1, column 1:\n    title: Test rule\n    ^\nbut found another document\n  in \"<unicode string>\", line 13, column 1:\n    ---\n    ^"
+ },
+ {
+  "text": "title: Corr\ncorrelation:\n    type: event_count\n    rules:\n        - a\n    timespan: 1h\n    group-by:\n        - User\n    condition:\n        gte: 5\n",
+  "error": "Rule 'a' not found in rule collection"
+ },
+ {
+  "text": "title: Corr\ncorrelation:\n    type: evnt_count\n    rules:\n        - a\n    timespan: 1h\n    condition:\n        gte: 5\n",
+  "error": "'evnt_count' is no valid Sigma correlation type"
+ },
+ {
+  "text": "title: Corr\ncorrelation:\n    type: event_count\n    rules:\n        - a\n    timespan: 1h\n",
+  "error": "Non-temporal Sigma correlation rule without condition"
+ },
+ {
+  "text": "title: Corr\ncorrelation:\n    type: event_count\n    rules: []\n    timespan: 1h\n    condition:\n        gte: 5\n",
+  "error": "A correlation rule needs a title and correlation.rules"
+ },
+ {
+  "text": "title: Corr\ncorrelation:\n    type: event_count\n    rules:\n        - a\n    timespan: 1hour\n    condition:\n        gte: 5\n",
+  "error": "Timespan '1hour' is invalid."
+ },
+ {
+  "text": "title: Corr\ncorrelation:\n    type: value_count\n    rules:\n        - a\n    timespan: 1h\n    condition:\n        gte: 5\n",
+  "error": "Value count correlation rule without field reference"
+ },
+ {
+  "text": "title: Corr\ncorrelation:\n    type: temporal\n    rules:\n        - a\n        - b\n    timespan: 1h\n",
+  "error": "Rule 'a' not found in rule collection"
+ },
+ {
+  "text": "title: Corr\ncorrelation:\n    type: event_count\n    rules:\n        - a\n    timespan: 1h\n    condition:\n        more: 5\n",
+  "error": "Sigma correlation condition must have exactly one condition item"
+ },
+ {
+  "text": "just text",
+  "error": "Empty or invalid YAML content or not a single rule object."
+ },
+ {
+  "text": "- a\n- b\n",
+  "error": "Empty or invalid YAML content or not a single rule object."
+ },
+ {
+  "text": "title: T\n  bad: indentation\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nlevel: medium\n",
+  "error": "mapping values are not allowed here\n  in \"<unicode string>\", line 2, column 6:\n      bad: indentation\n         ^"
+ },
+ {
+  "text": "title: Suspicious Certutil Download\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: Certutil used to download a file from the Internet\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Certutil/\nauthor: you\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\certutil.exe'\n        - OriginalFileName: 'CertUtil.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'urlcache'\n            - 'verifyctl'\n    condition: all of selection_*\nfalsepositives:\n    - Administrators downloading certificates\nlevel: high\n",
+  "error": null,
+  "name": "sample"
+ },
+ {
+  "text": "title: My new rule\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndate: 2026-11-03\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\change_me.exe'\n    condition: selection\nlevel: medium\n",
+  "error": null,
+  "name": "skeleton"
+ },
+ {
+  "text": "title: Suspicious Tool Execution With Encoded Command\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A tool started with an encoded command, as seen in intrusions\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\powershell.exe'\n        - OriginalFileName: 'PowerShell.EXE'\n    selection_cli:\n        CommandLine|contains:\n            - ' -enc '\n            - ' -EncodedCommand '\n    filter_main_parent:\n        ParentImage|endswith: '\\legit_updater.exe'\n    condition: all of selection_* and not 1 of filter_main_*\nfalsepositives:\n    - Administrative scripts\nlevel: high\n",
+  "error": null,
+  "name": "template win-process-creation"
+ },
+ {
+  "text": "title: Office Application Spawning A Shell\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: An Office application starting a command shell, typical of a malicious macro\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.execution\n    - attack.t1204.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_parent:\n        ParentImage|endswith:\n            - '\\winword.exe'\n            - '\\excel.exe'\n            - '\\powerpnt.exe'\n    selection_child:\n        Image|endswith:\n            - '\\cmd.exe'\n            - '\\powershell.exe'\n            - '\\wscript.exe'\n            - '\\mshta.exe'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n",
+  "error": null,
+  "name": "template win-parent-child"
+ },
+ {
+  "text": "title: Run Key Set From A Temporary Folder\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A Run key value pointing to a program in a temporary folder\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.persistence\n    - attack.t1547.001\nlogsource:\n    category: registry_set\n    product: windows\ndetection:\n    selection:\n        TargetObject|contains: '\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'\n        Details|contains:\n            - '\\AppData\\Local\\Temp\\'\n            - '\\Windows\\Temp\\'\n    condition: selection\nfalsepositives:\n    - Installers that register a first run from a temporary folder\nlevel: medium\n",
+  "error": null,
+  "name": "template win-registry-set"
+ },
+ {
+  "text": "title: Script Dropped In The Startup Folder\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A script file written in a Startup folder, run at each logon\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.persistence\n    - attack.t1547.001\nlogsource:\n    category: file_event\n    product: windows\ndetection:\n    selection:\n        TargetFilename|contains: '\\Start Menu\\Programs\\Startup\\'\n        TargetFilename|endswith:\n            - '.vbs'\n            - '.js'\n            - '.bat'\n            - '.ps1'\n    condition: selection\nfalsepositives:\n    - Legitimate logon scripts\nlevel: medium\n",
+  "error": null,
+  "name": "template win-file-event"
+ },
+ {
+  "text": "title: Notepad Initiating A Network Connection\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: Notepad opening an outbound connection, often a sign of process injection\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1071\nlogsource:\n    category: network_connection\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\notepad.exe'\n        Initiated: 'true'\n    filter_main_local:\n        DestinationIp|cidr:\n            - '10.0.0.0/8'\n            - '172.16.0.0/12'\n            - '192.168.0.0/16'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Unknown\nlevel: high\n",
+  "error": null,
+  "name": "template win-network"
+ },
+ {
+  "text": "title: Member Added To A Privileged Group\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A user added to the Domain Admins or Enterprise Admins group\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.persistence\n    - attack.t1098\nlogsource:\n    product: windows\n    service: security\ndetection:\n    selection:\n        EventID:\n            - 4728\n            - 4732\n            - 4756\n        TargetUserName:\n            - 'Domain Admins'\n            - 'Enterprise Admins'\n    condition: selection\nfalsepositives:\n    - Planned administrative changes\nlevel: high\n",
+  "error": null,
+  "name": "template win-security-event"
+ },
+ {
+  "text": "title: PowerShell Download And Execute\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A script block that downloads a payload and runs it in memory\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: ps_script\n    product: windows\n    definition: 'Script Block Logging must be enabled'\ndetection:\n    selection:\n        ScriptBlockText|contains|all:\n            - 'Net.WebClient'\n            - 'DownloadString'\n            - 'Invoke-Expression'\n    condition: selection\nfalsepositives:\n    - Software installers written in PowerShell\nlevel: high\n",
+  "error": null,
+  "name": "template win-powershell-script"
+ },
+ {
+  "text": "title: Reverse Shell Through Bash TCP Redirection\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: Bash connecting its input and output to a remote host\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.execution\n    - attack.t1059.004\nlogsource:\n    category: process_creation\n    product: linux\ndetection:\n    selection:\n        CommandLine|contains:\n            - '/dev/tcp/'\n            - '/dev/udp/'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n",
+  "error": null,
+  "name": "template linux-process"
+ },
+ {
+  "text": "title: Kernel Module Loaded With Insmod\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A kernel module loaded by hand, as rootkits do\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.persistence\n    - attack.t1547.006\nlogsource:\n    product: linux\n    service: auditd\ndetection:\n    selection:\n        type: 'EXECVE'\n        a0:\n            - 'insmod'\n            - 'modprobe'\n    condition: selection\nfalsepositives:\n    - Driver installation by administrators\nlevel: medium\n",
+  "error": null,
+  "name": "template linux-auditd"
+ },
+ {
+  "text": "title: DNS Query To A File Sharing Service\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A host resolving a file sharing domain often used for exfiltration\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.exfiltration\n    - attack.t1567.002\nlogsource:\n    category: dns_query\n    product: windows\ndetection:\n    selection:\n        QueryName|endswith:\n            - '.transfer.sh'\n            - '.anonfiles.com'\n    condition: selection\nfalsepositives:\n    - Legitimate use of these services\nlevel: medium\n",
+  "error": null,
+  "name": "template dns-query"
+ },
+ {
+  "text": "title: Request With A Scripting User Agent\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: An HTTP request made with the default user agent of a scripting tool\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1071.001\nlogsource:\n    category: proxy\ndetection:\n    selection:\n        c-useragent|startswith:\n            - 'python-requests/'\n            - 'Go-http-client/'\n            - 'curl/'\n    condition: selection\nfalsepositives:\n    - Internal scripts and monitoring tools\nlevel: low\n",
+  "error": null,
+  "name": "template proxy"
+ },
+ {
+  "text": "title: Path Traversal In A Web Request\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: A request trying to read files outside the web root\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.initial-access\n    - attack.t1190\nlogsource:\n    category: webserver\ndetection:\n    selection:\n        cs-uri-query|contains:\n            - '../../'\n            - '..%2f..%2f'\n            - '%2e%2e%2f'\n    condition: selection\nfalsepositives:\n    - Vulnerability scanners run by the security team\nlevel: medium\n",
+  "error": null,
+  "name": "template webserver"
+ },
+ {
+  "text": "title: CloudTrail Logging Stopped\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: Someone stopped or deleted a CloudTrail trail to hide their activity\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.defense-evasion\n    - attack.t1562.008\nlogsource:\n    product: aws\n    service: cloudtrail\ndetection:\n    selection:\n        eventSource: 'cloudtrail.amazonaws.com'\n        eventName:\n            - 'StopLogging'\n            - 'DeleteTrail'\n            - 'UpdateTrail'\n    condition: selection\nfalsepositives:\n    - Planned changes of the logging configuration\nlevel: high\n",
+  "error": null,
+  "name": "template aws-cloudtrail"
+ },
+ {
+  "text": "title: Exploit Strings In Application Logs\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: Strings of a known exploit written by the application\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.initial-access\n    - attack.t1190\nlogsource:\n    product: jvm\ndetection:\n    keywords:\n        - 'jndi:ldap://'\n        - 'jndi:rmi://'\n    condition: keywords\nfalsepositives:\n    - Unknown\nlevel: high\n",
+  "error": null,
+  "name": "template keywords"
+ },
+ {
+  "text": "title: Title of what is detected\nid: 929a690e-bef0-4204-a928-ef5e620d6fcc\nstatus: experimental\ndescription: What the rule detects and why\nreferences:\n    - https://example.org/report\nauthor: author\ndate: 2026-11-03\ntags:\n    - attack.execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\evil.exe'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: medium\n",
+  "error": null,
+  "name": "snippet sigma rule"
+ },
+ {
+  "text": "title: Certutil Used To Download A File\nid: 6f0b2b8a-0f0e-4c63-9a5c-3d6b1c2e4f10\nstatus: experimental\ndescription: Certutil, a Windows certificate tool, downloading a file from the Internet (a \"living off the land\" download, tutorial example)\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Certutil/\nauthor: Your Name\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\certutil.exe'\n        - OriginalFileName: 'CertUtil.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'urlcache'\n            - 'verifyctl'\n    condition: all of selection_*\n",
+  "error": null,
+  "name": "tutorial 4"
+ },
+ {
+  "text": "title: Certutil Used To Download A File\nid: 6f0b2b8a-0f0e-4c63-9a5c-3d6b1c2e4f10\nstatus: experimental\ndescription: Certutil, a Windows certificate tool, downloading a file from the Internet (a \"living off the land\" download, tutorial example)\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Certutil/\nauthor: Your Name\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\certutil.exe'\n        - OriginalFileName: 'CertUtil.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'urlcache'\n            - 'verifyctl'\n    filter_optional_localhost:\n        CommandLine|contains: 'http://127.0.0.1'\n    condition: all of selection_* and not 1 of filter_optional_*\n",
+  "error": null,
+  "name": "tutorial 5"
+ },
+ {
+  "text": "title: Certutil Used To Download A File\nid: 6f0b2b8a-0f0e-4c63-9a5c-3d6b1c2e4f10\nstatus: experimental\ndescription: Certutil, a Windows certificate tool, downloading a file from the Internet (a \"living off the land\" download, tutorial example)\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Certutil/\nauthor: Your Name\ndate: 2026-11-03\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\certutil.exe'\n        - OriginalFileName: 'CertUtil.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'urlcache'\n            - 'verifyctl'\n    filter_optional_localhost:\n        CommandLine|contains: 'http://127.0.0.1'\n    condition: all of selection_* and not 1 of filter_optional_*\nfalsepositives:\n    - Administrators downloading certificates with certutil\nlevel: high\n",
+  "error": null,
+  "name": "tutorial 6"
+ }
+]

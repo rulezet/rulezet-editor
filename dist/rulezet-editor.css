@@ -421,6 +421,28 @@ textarea.rze-field-input { resize: vertical; font-family: inherit; }
 .rze-cond-chip { border: 1px solid var(--rze-border); cursor: pointer; padding: 1px 8px; color: var(--rze-fg); }
 .rze-cond-chip:hover { border-color: var(--rze-accent); }
 
+.rze-tests-fields div { white-space: pre-wrap; word-break: break-all; }
+.rze-tests-fields b { color: var(--rze-property); font-weight: 600; }
+
+/* selections section (Sigma: log source, search identifiers, condition) */
+.rze-sel-logsource { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; }
+.rze-sel-ls { display: flex; flex-direction: column; gap: 2px; font-size: 11px; }
+.rze-sel { display: flex; flex-direction: column; gap: 5px; padding: 6px; border: 1px solid var(--rze-border); border-left: 3px solid var(--rze-accent); border-radius: 8px; background: var(--rze-bg); }
+.rze-sel.rze-sel-is-filter { border-left-color: var(--rze-warning); }
+.rze-sel-head { display: flex; gap: 4px; align-items: center; }
+.rze-sel-name { flex: 1; color: var(--rze-variable); font-weight: 600; }
+.rze-sel-filter { color: var(--rze-warning); }
+.rze-sel-item { display: flex; flex-direction: column; gap: 3px; padding: 5px; border: 1px dashed var(--rze-border); border-radius: 6px; }
+.rze-sel-item-main { display: flex; gap: 4px; align-items: center; }
+.rze-sel-field { flex: 1; color: var(--rze-property); }
+.rze-sel-more { width: auto; font-size: 11px; padding: 0 4px; height: 20px; }
+.rze-sel-values { resize: vertical; min-height: 28px; font-size: 12px; }
+.rze-sel-hint { font-size: 10.5px; }
+.rze-sel-raw { margin: 0; padding: 6px; font-size: 11.5px; white-space: pre-wrap; background: var(--rze-panel-bg); border-radius: 6px; max-height: 140px; overflow: auto; }
+.rze-sel-add-field { align-self: flex-start; font-size: 11.5px; border: 1px dashed var(--rze-border); }
+.rze-sel-adds { display: flex; flex-wrap: wrap; gap: 4px; }
+.rze-sel-adds .rze-btn { font-size: 12px; border: 1px dashed var(--rze-border); }
+
 /* tests (rulezet-tester) */
 .rze-tests { border-top: 1px solid var(--rze-border); background: var(--rze-bg); height: 46%; flex: 0 0 auto; min-height: 160px; display: flex; flex-direction: column; }
 .rze-tests[hidden] { display: none; }
@@ -856,6 +878,14 @@ body.rze-resizing-y, body.rze-resizing-y * { cursor: row-resize !important; }
 .rze-checks-section.rze-tone-ok { border-left-color: var(--rze-ok); }
 .rze-checks-section.rze-tone-warning { border-left-color: var(--rze-warning); }
 .rze-checks-section.rze-tone-error { border-left-color: var(--rze-error); }
+/* the section's tone colours its left border and its title only: the remarks and outputs inside keep
+   their own colour (a green ✓ line stays normal, only the failing one is red) */
+.rze-checks-section { color: var(--rze-fg); }
+.rze-checks-section.rze-tone-ok > .rze-checks-section-head > strong { color: var(--rze-ok); }
+.rze-checks-section.rze-tone-warning > .rze-checks-section-head > strong { color: var(--rze-warning); }
+.rze-checks-section.rze-tone-error > .rze-checks-section-head > strong { color: var(--rze-error); }
+.rze-checks-section.rze-tone-muted > .rze-checks-section-head > strong { color: var(--rze-muted); }
+.rze-checks-output-good .rze-checks-output-label { color: var(--rze-fg); }
 .rze-checks-section:first-of-type { grid-column: 1 / -1; }
 .rze-checks-section-head { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .rze-checks-link { color: var(--rze-muted); text-decoration: none; font-size: 11px; }
@@ -890,6 +920,45 @@ body.rze-resizing-y, body.rze-resizing-y * { cursor: row-resize !important; }
 .rze-checks-running-row .rze-spinner { color: var(--rze-accent); }
 .rze-checks-explain { margin-top: 3px; font-size: 11.5px; line-height: 1.45; color: var(--rze-fg); opacity: .85; white-space: pre-wrap; }
 .rze-checks-detail code { padding: 1px 5px; border-radius: 4px; background: var(--rze-bg); color: var(--rze-accent); }
+/* tool sections: score gauge, outputs (green ✓ / red ✗), folded notes */
+.rze-checks-tool-body { display: flex; flex-direction: column; gap: 6px; }
+.rze-checks-score { padding: 6px 8px; border-radius: 6px; background: var(--rze-active-line); }
+.rze-checks-score-head { display: flex; align-items: baseline; gap: 2px; }
+.rze-checks-score-value { font-size: 20px; }
+.rze-checks-score.rze-tone-ok .rze-checks-score-value { color: var(--rze-ok); }
+.rze-checks-score.rze-tone-warning .rze-checks-score-value { color: var(--rze-warning); }
+.rze-checks-score.rze-tone-error .rze-checks-score-value { color: var(--rze-error); }
+.rze-checks-score-max { font-size: 12px; color: var(--rze-muted); }
+.rze-checks-gauge { flex: 1; height: 6px; margin-left: 10px; border-radius: 999px; background: var(--rze-border); overflow: hidden; align-self: center; }
+.rze-checks-gauge span { display: block; height: 100%; border-radius: 999px; background: var(--rze-muted); }
+.rze-checks-score.rze-tone-ok .rze-checks-gauge span { background: var(--rze-ok); }
+.rze-checks-score.rze-tone-warning .rze-checks-gauge span { background: var(--rze-warning); }
+.rze-checks-score.rze-tone-error .rze-checks-gauge span { background: var(--rze-error); }
+.rze-checks-score-parts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.rze-checks-score-part { display: inline-flex; gap: 5px; padding: 1px 7px; border-radius: 999px; font-size: 11px; border: 1px solid var(--rze-border); color: var(--rze-muted); }
+.rze-checks-score-part.rze-tone-ok b { color: var(--rze-ok); }
+.rze-checks-score-part.rze-tone-warning b { color: var(--rze-warning); }
+.rze-checks-score-part.rze-tone-error b { color: var(--rze-error); }
+.rze-checks-outputs { display: flex; flex-direction: column; gap: 3px; }
+.rze-checks-output { border-radius: 5px; border-left: 3px solid var(--rze-muted); background: var(--rze-active-line); font-size: 12px; }
+.rze-checks-output-good { border-left-color: var(--rze-ok); }
+.rze-checks-output-bad { border-left-color: var(--rze-error); }
+.rze-checks-output summary { cursor: pointer; padding: 4px 6px; display: flex; flex-direction: column; gap: 2px; list-style: none; }
+.rze-checks-output-line { display: flex; align-items: center; gap: 6px; }
+.rze-checks-output-detail { font-size: 11px; color: var(--rze-fg); opacity: .85; padding-left: 18px; }
+.rze-checks-output-preview { display: block; padding-left: 18px; font-size: 11px; color: var(--rze-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rze-checks-output[open] .rze-checks-output-preview { display: none; }
+.rze-checks-output-bad .rze-checks-output-preview { white-space: normal; color: var(--rze-error); }
+.rze-checks-output summary::-webkit-details-marker { display: none; }
+.rze-checks-output-mark { font-weight: 700; width: 12px; text-align: center; }
+.rze-checks-output-good .rze-checks-output-mark { color: var(--rze-ok); }
+.rze-checks-output-bad .rze-checks-output-mark, .rze-checks-output-bad .rze-checks-output-label { color: var(--rze-error); }
+.rze-checks-output-label { font-weight: 600; }
+.rze-checks-output-body { padding: 0 6px 6px; }
+.rze-checks-output-body pre { margin: 0 0 4px; padding: 6px; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-size: 11.5px; border-radius: 5px; background: var(--rze-bg); }
+.rze-checks-open { margin-left: 6px; font-size: 11px; color: var(--rze-accent); text-decoration: none; }
+.rze-checks-copy { font-size: 11px; padding: 1px 8px; }
+.rze-checks-notes > summary { cursor: pointer; font-size: 11.5px; color: var(--rze-muted); padding: 2px 0; }
 
 /* Rules panel: titles-only view, per-rule collapse, long lists cut (outline.js) */
 .rze-outline-compact { font-size: 11.5px; padding: 1px 8px; gap: 4px; }

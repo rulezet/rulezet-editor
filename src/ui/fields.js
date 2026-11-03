@@ -7,6 +7,7 @@
  * ui:   { formats: field id, select: field id, selectQuery, browse: { field, path, labels, page, data, loading, error } }
  */
 import { h, icon } from './dom.js';
+import { selectionsSection } from './selections.js';
 import { chipColor, isMinVersion, stepVersion, textOn, toMetaValue, validItem } from '../core/fields.js';
 
 let restoring = false;           // focus put back after a re-render: not a user action
@@ -59,6 +60,7 @@ export function renderFields(el, view, cb) {
             if (view.locked) body.appendChild(h('div', { class: 'rze-fields-note', text: t('fLocked') }));
             for (const def of view.defs) body.appendChild(fieldRow(def, view, cb));
             if (view.body) body.appendChild(bodySection(view, cb));
+            if (view.selections) body.appendChild(selectionsSection(view, cb));
         }
     }
 
@@ -359,10 +361,29 @@ function bodySection(view, cb) {
                 onchange: e => put({ value: e.target.value }), onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } } }),
             mods.length ? h('div', { class: 'rze-str-mods' }, ...mods) : '');
     });
-    // condition: one row per top-level clause, joined by and / or — no second free-text copy of it
-    const parts = view.splitCondition ? view.splitCondition(b.condition || '') : [{ op: null, text: b.condition || '' }];
-    const shown = parts.length === 1 && parts[0].text === 'true' ? [] : parts;
-    const write = (next) => cb.onCondition(view.joinCondition(next) || 'true');
+    const cond = conditionBlock(view, cb, { condition: b.condition, split: view.splitCondition, join: view.joinCondition,
+        clauses: view.conditionClauses ? view.conditionClauses(b.strings) : [], onCondition: cb.onCondition, empty: 'true' });
+    return h('section', { class: 'rze-body' },
+        h('div', { class: 'rze-body-title' }, h('strong', { text: t('fBody') }), h('span', { class: 'rze-muted', text: t('fBodyHint') })),
+        h('div', { class: 'rze-field-label' }, h('span', { text: t('fStrings') }), h('span', { class: 'rze-fields-badge', text: String(b.strings.length) })),
+        ...rows,
+        h('button', { type: 'button', class: 'rze-btn rze-str-add', disabled: locked,
+            onclick: () => cb.onString(null, { id: nextId(b.strings.map(s => s.id)), kind: 'text', value: 'change me', modifiers: [] }) }, icon('plus'), t('fAddString')),
+        ...cond);
+}
+
+/**
+ * The condition as rows: one per top-level clause joined by and / or, a box to add one, and
+ * ready-made clauses. Shared by the formats' own sections (YARA strings, Sigma detection).
+ * opts: { condition, split(text), join(parts), clauses: [{ label, text }], onCondition(text), empty }
+ * `empty` is what an empty condition is written as (YARA: true); null = never written empty.
+ */
+export function conditionBlock(view, cb, opts) {
+    const { t } = cb;
+    const locked = view.locked;
+    const parts = opts.split ? opts.split(opts.condition || '') : [{ op: null, text: opts.condition || '' }];
+    const shown = opts.empty && parts.length === 1 && parts[0].text === opts.empty ? [] : parts;
+    const write = (next) => { const v = opts.join(next) || opts.empty; if (v) opts.onCondition(v); };
     const nextOp = (view.ui && view.ui.condOp) || 'and';
     const clauseRows = shown.map((p, i) => h('div', { class: 'rze-cond-row' },
         i === 0 ? h('span', { class: 'rze-cond-first', text: t('fWhen') })
@@ -372,18 +393,12 @@ function bodySection(view, cb) {
         h('input', { class: 'rze-field-input rze-mono rze-cond-text', type: 'text', value: p.text, disabled: locked, 'data-focus-key': `cond:${i}:text`,
             onchange: e => write(shown.map((x, j) => (j === i ? { ...x, text: e.target.value } : x))),
             onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } } }),
-        h('button', { type: 'button', class: 'rze-icon-btn', 'aria-label': t('fRemoveClause'), disabled: locked,
+        h('button', { type: 'button', class: 'rze-icon-btn', 'aria-label': t('fRemoveClause'), disabled: locked || (!opts.empty && shown.length === 1),
             onclick: () => write(shown.filter((_, j) => j !== i).map((x, j) => (j === 0 ? { ...x, op: null } : x))) }, icon('close'))));
     const add = (text) => write([...shown, { op: shown.length ? nextOp : null, text }]);
-    const clauses = view.conditionClauses ? view.conditionClauses(b.strings) : [];
-    return h('section', { class: 'rze-body' },
-        h('div', { class: 'rze-body-title' }, h('strong', { text: t('fBody') }), h('span', { class: 'rze-muted', text: t('fBodyHint') })),
-        h('div', { class: 'rze-field-label' }, h('span', { text: t('fStrings') }), h('span', { class: 'rze-fields-badge', text: String(b.strings.length) })),
-        ...rows,
-        h('button', { type: 'button', class: 'rze-btn rze-str-add', disabled: locked,
-            onclick: () => cb.onString(null, { id: nextId(b.strings.map(s => s.id)), kind: 'text', value: 'change me', modifiers: [] }) }, icon('plus'), t('fAddString')),
+    return [
         h('div', { class: 'rze-field-label' }, h('span', { text: t('fCondition') }),
-            shown.length ? '' : h('span', { class: 'rze-fields-badge', text: t('fAlwaysTrue') })),
+            shown.length || !opts.empty ? '' : h('span', { class: 'rze-fields-badge', text: t('fAlwaysTrue') })),
         ...clauseRows,
         h('div', { class: 'rze-cond-add' },
             h('span', { class: 'rze-muted', text: shown.length ? t('fAddWith') : t('fAddFirst') }),
@@ -393,8 +408,9 @@ function bodySection(view, cb) {
                 'data-focus-key': 'cond:new',
                 onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); const v = e.target.value.trim(); if (v) add(v); } } })),
         h('div', { class: 'rze-cond-quick' },
-            ...clauses.map(c => h('button', { type: 'button', class: 'rze-field-chip rze-cond-chip rze-mono', disabled: locked,
-                title: t('fAddClause', { text: c.text }), onclick: () => add(c.text) }, `+ ${c.label}`))));
+            ...(opts.clauses || []).map(c => h('button', { type: 'button', class: 'rze-field-chip rze-cond-chip rze-mono', disabled: locked,
+                title: t('fAddClause', { text: c.text }), onclick: () => add(c.text) }, `+ ${c.label}`))),
+    ];
 }
 
 function nextId(ids) {
