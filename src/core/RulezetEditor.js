@@ -1544,6 +1544,7 @@ export class RulezetEditor {
             this.pack.debug ? btn('search', t('try'), () => this.toggleTry(), this._try.open, `${t('tryTitle')} (Ctrl+Shift+Y)`) : '',
             this._checksEnabled() ? btn('ok', t('checks'), () => this.toggleChecks(), this._checks.open, t('checksTitle')) : '',
             this.pack.format ? btn('format', t('format'), () => this.format(), false, `${t('format')} (Shift+Alt+F)`) : '',
+            ...(this.options.readOnly ? [] : (this.pack.toolbarActions || []).map(b => btn(b.icon || 'tools', b.label, () => this.runAction(b.id), false, b.title || b.label))),
             this.pack.splitRules ? btn('outline', t('outline'), () => this.toggleOutline(), this._outlineOpen, `${t('outline')} (Ctrl+Shift+O)`) : '',
             btn('problems', t('problems'), () => this.toggleProblems(), this._problemsOpen, `${t('problems')} (Ctrl+Shift+M)`),
             this._fieldsEnabled() ? btn('tag', t('fields'), () => this.toggleFields(), this._fields.open, t('fieldsHint')) : '',

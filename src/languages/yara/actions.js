@@ -54,6 +54,21 @@ function andCondition(rule, extra, { prefix = false } = {}) {
 
 const noRule = { error: 'Put the cursor inside a rule' };
 
+// Meta keys that hold a list: written one value per line (repeated key), not "a,b" in one string
+const MITRE_KEYS = new Set(['mitre_att', 'mitre_attack', 'attack', 'technique', 'techniques']);
+const LIST_KEYS = new Set([...MITRE_KEYS, 'hash', 'hashes', 'md5', 'sha1', 'sha256', 'imphash', 'sample', 'samples',
+    'reference', 'references', 'ref', 'url', 'cve', 'cves', 'actor', 'actors', 'threat_actor', 'malware', 'malware_family',
+    'tag', 'tags', 'campaign', 'campaigns', 'category', 'categories', 'mitre_tactic', 'tactic', 'tactics', 'sector', 'sectors', 'country', 'countries']);
+// Names that may contain spaces: split only on , and ;
+const TEXT_LIST_KEYS = new Set(['reference', 'references', 'ref', 'url', 'actor', 'actors', 'threat_actor', 'malware', 'malware_family',
+    'tag', 'tags', 'campaign', 'campaigns', 'category', 'categories', 'mitre_tactic', 'tactic', 'tactics', 'sector', 'sectors', 'country', 'countries']);
+
+/** "a, b; c" -> ['a', 'b', 'c'] (hashes / techniques / CVEs also split on spaces; references and names only on , ;) */
+function splitValues(key, value) {
+    const sep = TEXT_LIST_KEYS.has(key) ? /\s*[,;]\s*/ : /[\s,;]+/;
+    return String(value || '').split(sep).map(x => x.trim()).filter(Boolean);
+}
+
 export const ACTIONS = [
     {
         id: 'yara.date', label: 'Add date (or update "modified")',
@@ -124,13 +139,12 @@ export const ACTIONS = [
             if (!rule) return noRule;
             const v = (value || '').trim().toUpperCase();
             if (!/^T\d{4}(\.\d{3})?$/.test(v)) return { error: 'Expected a technique id like T1059 or T1059.001' };
-            const existing = rule.meta.find(m => m.key === 'mitre_attack');
-            if (existing && existing.valueType === 'string') {
-                const list = existing.value.split(/[,\s]+/).filter(Boolean);
-                if (list.includes(v)) return { error: `${v} is already there` };
-                return [{ from: existing.valueFrom, to: existing.valueTo, insert: quote([...list, v].join(', ')) }];
-            }
-            return setMeta(ctx.text, rule, 'mitre_attack', quote(v));
+            // One technique per line (repeated key), the way the CCCS standard and most tools read them
+            const mine = rule.meta.filter(m => MITRE_KEYS.has(m.key) && m.valueType === 'string');
+            if (mine.some(m => splitValues(m.key, m.value).map(x => x.toUpperCase()).includes(v))) return { error: `${v} is already there` };
+            if (!mine.length) return setMeta(ctx.text, rule, 'mitre_attack', quote(v));
+            const last = mine[mine.length - 1];
+            return [{ from: last.to, to: last.to, insert: `\n${indentOf(ctx.text, last.from)}${last.key} = ${quote(v)}` }];
         },
     },
     {
@@ -222,6 +236,24 @@ export const ACTIONS = [
             const v = (value || '').trim().toUpperCase().replace(/\s+/g, '');
             if (!/^\d+(KB|MB)?$/.test(v)) return { error: 'Expected a size like 500KB or 5MB' };
             return andCondition(rule, `filesize < ${v}`) || { error: 'The rule has no condition' };
+        },
+    },
+    {
+        // Toolbar button too (pack.toolbarActions): every rule of the document, cursor anywhere.
+        // CCCS YARA / most tools want a list as one key per line: tags = "a, b" -> tags = "a" / tags = "b"
+        id: 'yara.splitMeta', label: 'One meta value per line (split "a, b" lists: tags, ATT&CK, campaign, hash…)',
+        run(ctx) {
+            const changes = [];
+            for (const rule of ctx.parsed.rules) {
+                for (const m of rule.meta || []) {
+                    if (!LIST_KEYS.has(m.key) || m.valueType !== 'string') continue;
+                    const values = splitValues(m.key, m.value);
+                    if (values.length < 2) continue;
+                    const indent = indentOf(ctx.text, m.from);
+                    changes.push({ from: m.from, to: m.to, insert: values.map(v => `${m.key} = ${quote(v)}`).join(`\n${indent}`) });
+                }
+            }
+            return changes.length ? changes : { error: 'No meta list to split (tags, mitre_att, campaign, hash, reference… with several values)' };
         },
     },
     {

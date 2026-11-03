@@ -153,6 +153,31 @@ test('rule tools: date, id, tag, string, PE check, private', () => {
     assert.ok(yara.actions(ctx).find(a => a.id === 'yara.tag').run(ctx, '1bad').error);
 });
 
+test('rule tools: one meta value per line, ATT&CK added on its own line', () => {
+    const apply = (t, changes) => {
+        for (const c of [...changes].sort((a, b) => b.from - a.from)) t = t.slice(0, c.from) + c.insert + t.slice(c.to);
+        return t;
+    };
+    const run = (t, id, value) => {
+        const ctx = { text: t, pos: 10, parsed: yara.parse(t) };
+        return yara.actions(ctx).find(a => a.id === id).run(ctx, value);
+    };
+    const src = 'rule demo\n{\n    meta:\n        description = "a, b"\n        hash = "md5,md5_2"\n        mitre_att = "T1498, T1489"\n' +
+        '        reference = "https://a.example, https://b.example"\n        tags = "APT 28, ransomware"\n        campaign = "Op One; Op Two"\n    condition:\n        true\n}';
+    const out = apply(src, run(src, 'yara.splitMeta'));
+    assert.match(out, /description = "a, b"/);                                  // free text is left alone
+    assert.match(out, /hash = "md5"\n        hash = "md5_2"/);
+    assert.match(out, /mitre_att = "T1498"\n        mitre_att = "T1489"/);
+    assert.match(out, /reference = "https:\/\/a.example"\n        reference = "https:\/\/b.example"/);
+    assert.match(out, /tags = "APT 28"\n        tags = "ransomware"/);                // names keep their spaces
+    assert.match(out, /campaign = "Op One"\n        campaign = "Op Two"/);
+    assert.deepEqual(yara.lint(yara.parse(out), { requireMeta: [] }).filter(d => d.severity === 'error'), []);
+    assert.ok(run(out, 'yara.splitMeta').error);                                 // nothing left to split
+    const added = apply(out, run(out, 'yara.mitre', 't1059'));
+    assert.match(added, /mitre_att = "T1489"\n        mitre_att = "T1059"/);      // a new line, never "T1489, T1059"
+    assert.ok(run(added, 'yara.mitre', 'T1498').error);                          // already there
+});
+
 test('the tutorial example: every stage is valid, the final rule has no warning', () => {
     const stages = yara.tutorial.stages;
     assert.ok(stages.length >= 4);

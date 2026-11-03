@@ -58,6 +58,8 @@ export default {
     templates: TEMPLATES,              // "New rule from template" gallery (YARA Style Guide structures)
     credits: CREDITS,                  // Credits & licences page (Markdown)
     actions,
+    // Toolbar buttons that run an action (next to Format)
+    toolbarActions: [{ id: 'yara.splitMeta', icon: 'list', label: 'One per line', title: 'Meta lists one value per line: tags = "a, b" becomes two tags lines (CCCS YARA standard)' }],
     modules: MODULES,
 
     parse,
