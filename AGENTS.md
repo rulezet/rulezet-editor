@@ -142,6 +142,11 @@ docs/rulezet/                one file per feature: how it is integrated into Rul
 
 ## Adding a format
 
+The full checklist (pack, oracle against Rulezet's verdict, the format's Fields section, tests on
+samples in rulezet-tester, external checks, admin setting, docs) is the skill
+[`skills/rulezet-editor-format/SKILL.md`](skills/rulezet-editor-format/SKILL.md) — also in
+[rulezet-ai-skill](https://github.com/rulezet/rulezet-ai-skill). The short version:
+
 1. Copy `src/languages/_template/` to `src/languages/<id>/` and fill it in
    (reference: `docs/language-pack.md`, example: `src/languages/yara/`).
 2. Register it in `src/index.js`.
